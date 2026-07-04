@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Live, playable demo: type a text prompt, get a generated 2D environment, walk through it in first-person -- Tech Challenge GI submission.">
+<title>Corridor Viewport — a maze with lava traps and a locked door</title>
+
+<style>
+  :root {
+    --bench: #0c0d0b;
+    --panel: #1a1a19;
+    --panel-raised: #201f1d;
+    --panel-inset: #121210;
+    --bevel: #33322e;
+    --bevel-lit: #4a4944;
+    --ink: #f5f4ef;
+    --ink-dim: #8f8d84;
+    --ink-faint: #5c5b55;
+    --accent: #3987e5;
+    --hazard: #e35a5a;
+    --door-locked: #d68a3e;
+    --door-open: #57d68a;
+    --key: #e8c93c;
+    --pickup: #4d8fe0;
+    --goal: #57d68a;
+    --critical: #e35a5a;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--bench);
+    background-image:
+      radial-gradient(ellipse 900px 500px at 50% -10%, rgba(57,135,229,0.06), transparent 60%),
+      repeating-linear-gradient(rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 3px);
+  }
+
+  body {
+    color: var(--ink);
+    font-family: "JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    display: flex;
+    justify-content: center;
+    padding: 32px 16px 48px;
+  }
+
+  .rig { width: 100%; max-width: 1020px; }
+
+  .rig-eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .rig-eyebrow::before {
+    content: "";
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px 1px var(--accent);
+    display: inline-block;
+  }
+  .rig-title {
+    font-size: clamp(20px, 3.4vw, 26px);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0 0 6px;
+    text-wrap: balance;
+  }
+  .rig-sub {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--ink-dim);
+    max-width: 68ch;
+    margin: 0 0 24px;
+  }
+  .rig-sub b { color: var(--ink); font-weight: 600; }
+
+  /* -- console panel -- */
+  .console {
+    background: var(--panel);
+    border: 1px solid var(--bevel);
+    border-radius: 10px;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.04),
+      0 1px 2px rgba(0,0,0,0.4),
+      0 24px 60px -24px rgba(0,0,0,0.7);
+    padding: 16px;
+  }
+
+  /* -- prompt bar -- */
+  .promptbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 4px 4px 12px;
+    background: var(--panel-inset);
+    border: 1px solid var(--bevel);
+    border-radius: 6px;
+    margin-bottom: 10px;
+  }
+  .promptbar .glyph { color: var(--accent); font-weight: 700; }
+  .promptbar input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 13px;
+    padding: 9px 4px;
+  }
+  .promptbar input::placeholder { color: var(--ink-faint); }
+  .promptbar button {
+    font-family: inherit;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--bench);
+    background: var(--accent);
+    border: none;
+    border-radius: 4px;
+    padding: 9px 14px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .promptbar button:hover { filter: brightness(1.1); }
+  .promptbar button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .promptbar-note {
+    font-size: 11px;
+    color: var(--ink-faint);
+    margin: 0 0 14px;
+    line-height: 1.5;
+  }
+  .promptbar-note b { color: var(--ink-dim); font-weight: 600; }
+
+  /* -- telemetry strip -- */
+  .telemetry {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 18px;
+    padding: 10px 14px;
+    background: var(--panel-inset);
+    border: 1px solid var(--bevel);
+    border-radius: 6px;
+    margin-bottom: 14px;
+    font-size: 12px;
+  }
+  .telemetry .field { display: flex; align-items: baseline; gap: 6px; white-space: nowrap; }
+  .telemetry .label { color: var(--ink-faint); letter-spacing: 0.08em; text-transform: uppercase; font-size: 10.5px; }
+  .telemetry .value { color: var(--ink); font-variant-numeric: tabular-nums; font-weight: 600; }
+  .status-pill {
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 100px;
+    background: rgba(57,135,229,0.14);
+    color: var(--accent);
+    border: 1px solid rgba(57,135,229,0.35);
+  }
+  .status-pill.win { background: rgba(87,214,138,0.14); color: var(--goal); border-color: rgba(87,214,138,0.4); }
+  .status-pill.dead { background: rgba(227,90,90,0.14); color: var(--hazard); border-color: rgba(227,90,90,0.4); }
+  .telemetry .spacer { flex: 1; }
+
+  /* -- viewports -- */
+  .viewports {
+    display: grid;
+    grid-template-columns: 1fr 260px;
+    gap: 12px;
+  }
+  @media (max-width: 680px) {
+    .viewports { grid-template-columns: 1fr; }
+  }
+  .viewport {
+    position: relative;
+    background: #000;
+    border: 1px solid var(--bevel);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .viewport .tag {
+    position: absolute;
+    top: 8px; left: 10px;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    z-index: 2;
+    pointer-events: none;
+  }
+  .viewport canvas { display: block; width: 100%; height: auto; }
+
+  .fp-viewport::after {
+    content: "";
+    position: absolute; inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px, rgba(0,0,0,0.14) 3px);
+    mix-blend-mode: multiply;
+  }
+  .fp-viewport::before {
+    content: "";
+    position: absolute; inset: 0;
+    pointer-events: none;
+    box-shadow: inset 0 0 90px 18px rgba(0,0,0,0.55);
+    z-index: 1;
+  }
+
+  .overlay-msg {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 10px;
+    background: rgba(10,10,9,0.72);
+    z-index: 3;
+    text-align: center;
+    padding: 20px;
+  }
+  .overlay-msg.show { display: flex; }
+  .overlay-msg .big { font-size: 22px; font-weight: 700; letter-spacing: 0.02em; }
+  .overlay-msg .big.win { color: var(--goal); }
+  .overlay-msg .big.dead { color: var(--hazard); }
+  .overlay-msg .hint { font-size: 12px; color: var(--ink-dim); }
+
+  /* -- controls legend -- */
+  .legend {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 18px;
+    margin-top: 14px;
+    padding: 12px 14px;
+    background: var(--panel-inset);
+    border: 1px solid var(--bevel);
+    border-radius: 6px;
+  }
+  .legend-group { display: flex; align-items: center; gap: 8px; }
+  .key {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 30px;
+    height: 26px;
+    padding: 0 8px;
+    background: linear-gradient(180deg, var(--panel-raised), var(--panel-inset));
+    border: 1px solid var(--bevel-lit);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ink);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset;
+  }
+  .legend-label { font-size: 11.5px; color: var(--ink-dim); }
+
+  /* -- event ticker -- */
+  .ticker {
+    margin-top: 12px;
+    height: 20px;
+    padding: 0 14px;
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    color: var(--ink-dim);
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .ticker .glyph { color: var(--accent); margin-right: 8px; }
+  .ticker span.text { color: var(--ink); }
+
+  .rig-foot {
+    margin-top: 18px;
+    font-size: 11px;
+    color: var(--ink-faint);
+    line-height: 1.6;
+  }
+  .rig-foot b { color: var(--ink-dim); }
+
+  button.restart {
+    font-family: inherit;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--ink);
+    background: var(--panel-raised);
+    border: 1px solid var(--bevel-lit);
+    border-radius: 5px;
+    padding: 7px 14px;
+    cursor: pointer;
+  }
+  button.restart:hover { border-color: var(--accent); color: var(--accent); }
+  button.restart:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rig-eyebrow::before { box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+
+
+<div class="rig">
+  <p class="rig-eyebrow">tech_challenge_GI — live viewport</p>
+  <h1 class="rig-title">"a maze with lava traps and a locked door"</h1>
+  <p class="rig-sub">
+    Generated by <b>harness/generation/maze.py</b> (seed 0 — <code>python3 run_maze_demo.py 0</code>
+    in the repo), then ported to a lightweight JS/Canvas physics + corridor-perspective
+    renderer so it's playable directly in this tab, since <b>play_human.py</b> needs a real
+    display your headless session doesn't have. Eight zigzagging platforms, seven lava
+    gaps, a key gating a locked door before the goal — the Python engine remains the
+    verified ground truth (this exact seed's honest solve is confirmed there); this is a
+    demo of the same scene, not a replacement for it. Click the viewport, then use the
+    controls below.
+  </p>
+
+  <div class="console">
+    <div class="promptbar">
+      <span class="glyph">&gt;</span>
+      <input id="promptInput" type="text" placeholder="a maze with lava traps and a locked door"
+             value="a maze with lava traps and a locked door" maxlength="120" />
+      <button id="generateBtn">generate</button>
+    </div>
+    <p class="promptbar-note">
+      Local keyword compiler, not an LLM — no network call happens here (the sandbox this
+      page runs in blocks outbound requests regardless). Recognizes: <b>lava / spikes / traps</b>
+      (hazards), <b>locked / key / gate</b> (door + key), <b>maze / winding / zigzag</b>
+      (a taller, harder path), <b>pickup / coin / can / gem</b> (a collectible).
+      Every generated layout is checked for a reachable route before it's handed to you —
+      same idea as the Python validator, a smaller version of it.
+    </p>
+    <div class="telemetry">
+      <div class="field"><span class="status-pill" id="statusPill">running</span></div>
+      <div class="field"><span class="label">tick</span><span class="value" id="tickVal">0</span></div>
+      <div class="field"><span class="label">held keys</span><span class="value" id="keysVal">—</span></div>
+      <div class="field"><span class="label">collected</span><span class="value" id="collectedVal">0/2</span></div>
+      <div class="spacer"></div>
+      <div class="field"><span class="label">facing</span><span class="value" id="facingVal">right</span></div>
+    </div>
+
+    <div class="viewports">
+      <div class="viewport fp-viewport">
+        <span class="tag">first-person / corridor view</span>
+        <canvas id="fpCanvas" width="720" height="440" tabindex="0" style="outline:none;"></canvas>
+        <div class="overlay-msg" id="overlay">
+          <div class="big" id="overlayBig">YOU WIN</div>
+          <div class="hint">press R, or the button below, to run it again</div>
+        </div>
+      </div>
+      <div class="viewport">
+        <span class="tag">top-down</span>
+        <canvas id="tdCanvas" width="260" height="90"></canvas>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-group">
+        <span class="key">←</span><span class="key">→</span>
+        <span class="legend-label">move</span>
+      </div>
+      <div class="legend-group">
+        <span class="key">SPACE</span><span class="key">↑</span>
+        <span class="legend-label">jump</span>
+      </div>
+      <div class="legend-group">
+        <span class="key">R</span>
+        <span class="legend-label">restart</span>
+      </div>
+      <div class="spacer"></div>
+      <button class="restart" id="restartBtn">restart</button>
+    </div>
+
+    <div class="ticker">
+      <span class="glyph">▸</span><span class="text" id="tickerText">loading objective…</span>
+    </div>
+  </div>
+
+  <p class="rig-foot">
+    <b>Simplified from the real engine, on purpose:</b> jump and horizontal movement are
+    independent axes here (the real engine's single discrete action per tick is what made
+    <b>navigator.py</b>'s jump-composition bug possible — this port sidesteps that class of
+    bug rather than reproducing it). Collision is axis-separated AABB, not pymunk's full 2D
+    polygon resolution. One hardcoded scene, no ramps (sloped collision isn't reimplemented
+    here). Everything visible — the door unlocking, the hazard, the goal check — runs on the
+    same event rules as the real objective predicate language.
+  </p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // Generated by harness/generation/maze.py, seed 0 (python3 run_maze_demo.py 0),
+  // exactly as the Python engine solved it -- not a hand-tuned demo layout.
+  var SCENE = {
+    world: { width: 2102, height: 720 },
+    playerStart: { x: 40, y: 640 },
+    goalZone: { x: 1952, y: 470, width: 70, height: 90 },
+    objective: { and: [{ event: "zone_enter", id: "goal_zone" }, { event: "pickup", id: "maze_key" }] },
+    objects: [
+      { id: "ground", type: "platform", x: 0, y: 680, width: 1280, height: 40 },
+      { id: "maze_platform_0", type: "platform", x: 200, y: 590, width: 164, height: 24 },
+      { id: "lava_0", type: "hazard", x: 391, y: 660, width: 59, height: 20, lethal: true },
+      { id: "maze_platform_1", type: "platform", x: 475, y: 520, width: 112, height: 24 },
+      { id: "lava_1", type: "hazard", x: 610, y: 660, width: 51, height: 20, lethal: true },
+      { id: "maze_platform_2", type: "platform", x: 703, y: 590, width: 135, height: 24 },
+      { id: "lava_2", type: "hazard", x: 862, y: 660, width: 50, height: 20, lethal: true },
+      { id: "maze_platform_3", type: "platform", x: 945, y: 550, width: 147, height: 24 },
+      { id: "lava_3", type: "hazard", x: 1113, y: 660, width: 51, height: 20, lethal: true },
+      { id: "maze_platform_4", type: "platform", x: 1185, y: 520, width: 128, height: 24 },
+      { id: "lava_4", type: "hazard", x: 1332, y: 660, width: 59, height: 20, lethal: true },
+      { id: "maze_platform_5", type: "platform", x: 1404, y: 590, width: 149, height: 24 },
+      { id: "lava_5", type: "hazard", x: 1576, y: 660, width: 52, height: 20, lethal: true },
+      { id: "maze_platform_6", type: "platform", x: 1647, y: 520, width: 129, height: 24 },
+      { id: "lava_6", type: "hazard", x: 1794, y: 660, width: 58, height: 20, lethal: true },
+      { id: "maze_platform_7", type: "platform", x: 1865, y: 560, width: 167, height: 24 },
+      { id: "maze_key", type: "key", x: 495, y: 498, radius: 12, keyId: "k1" },
+      { id: "maze_door", type: "door", x: 1805, y: 440, width: 30, height: 120, locked: true, keyId: "k1" }
+    ]
+  };
+
+  function evaluateObjective(node, log) {
+    if (node.event !== undefined) {
+      return log.some(function (e) { return e.event === node.event && e.id === node.id; });
+    }
+    if (node.and) return node.and.every(function (c) { return evaluateObjective(c, log); });
+    if (node.or) return node.or.some(function (c) { return evaluateObjective(c, log); });
+    if (node.not) return !evaluateObjective(node.not, log);
+    return false;
+  }
+
+  function describeObjective(node) {
+    if (node.event !== undefined) {
+      if (node.event === "zone_enter") return "reach " + node.id;
+      if (node.event === "pickup") return "collect " + node.id;
+      return node.event + " " + node.id;
+    }
+    if (node.and) return node.and.map(describeObjective).join(" + ");
+    if (node.or) return "(" + node.or.map(describeObjective).join(" OR ") + ")";
+    if (node.not) return "never " + describeObjective(node.not);
+    return "objective";
+  }
+
+  function objectivePickupIds(node) {
+    if (node.event === "pickup") return [node.id];
+    if (node.and) return node.and.reduce(function (acc, c) { return acc.concat(objectivePickupIds(c)); }, []);
+    if (node.or) return node.or.reduce(function (acc, c) { return acc.concat(objectivePickupIds(c)); }, []);
+    return [];
+  }
+  var REQUIRED_PICKUPS = objectivePickupIds(SCENE.objective);
+
+  // -- local keyword-based text-to-scene compiler --------------------------
+  // Not an LLM: a rule-based mapping from recognized words onto the same
+  // primitives (platform/hazard/key/door/pickup) the Python schema uses, in
+  // a single winding path (this world has one real spatial axis -- see
+  // raycaster.py's docstring for the same point). Every candidate is run
+  // through checkReachable() before being handed back; a candidate that
+  // fails retries with a new random layout (bounded attempts), mirroring
+  // generation/validator.py's reject-and-retry pattern in miniature.
+  var SAFE_RISES = [60, 90, 120, 150];   // px above ground -- matches MAX_VERTICAL_RISE headroom, never 0 (embeds in the ground plate)
+  var SAFE_GAP_MIN = 70, SAFE_GAP_MAX = 110;
+
+  function parsePrompt(text) {
+    var t = text.toLowerCase();
+    return {
+      hazard: /lava|spike|trap|hazard|fire|flame/.test(t),
+      lockedDoor: /lock|key|gate|vault/.test(t),
+      maze: /maze|winding|zigzag|labyrinth|corridor/.test(t),
+      pickup: /pickup|coin|can\b|item|treasure|gem|artifact/.test(t),
+      rampMentioned: /ramp|slope|incline/.test(t)
+    };
+  }
+
+  function buildCandidateScene(flags, rng) {
+    var GROUND_Y = 680;
+    var nSegments = flags.maze ? 8 : 5;
+    var objects = [{ id: "ground", type: "platform", x: 0, y: GROUND_Y, width: 1400, height: 40 }];
+
+    var x = 200;
+    var segments = [];
+    var prevRise = SAFE_RISES[1];
+    for (var i = 0; i < nSegments; i++) {
+      var rise;
+      if (flags.maze) {
+        do { rise = SAFE_RISES[Math.floor(rng() * SAFE_RISES.length)]; } while (rise === prevRise);
+      } else {
+        var idx = Math.max(0, Math.min(2, 1 + Math.round((rng() - 0.5) * 2)));
+        rise = SAFE_RISES[idx];
+      }
+      prevRise = rise;
+      var w = 120 + Math.floor(rng() * 60);
+      var y = GROUND_Y - rise;
+      var pid = "seg_" + i;
+      objects.push({ id: pid, type: "platform", x: x, y: y, width: w, height: 24 });
+      segments.push({ id: pid, x: x, y: y, width: w, rise: rise });
+
+      if (i < nSegments - 1 && flags.hazard && rng() < 0.8) {
+        var gapX = x + w + 12 + Math.floor(rng() * 18);
+        var gapW = 40 + Math.floor(rng() * 25);
+        objects.push({ id: "hazard_" + i, type: "hazard", x: gapX, y: GROUND_Y - 20, width: gapW, height: 20, lethal: true });
+      }
+      x += w + SAFE_GAP_MIN + Math.floor(rng() * (SAFE_GAP_MAX - SAFE_GAP_MIN));
+    }
+
+    var objectiveTerms = [{ event: "zone_enter", id: "goal_zone" }];
+
+    if (flags.lockedDoor && segments.length > 2) {
+      var keySeg = segments[1];
+      objects.push({ id: "gen_key", type: "key", x: keySeg.x + 20, y: keySeg.y - 22, radius: 12, keyId: "gk1" });
+      var doorSeg = segments[segments.length - 1];
+      var prevSeg = segments[segments.length - 2];
+      var doorX = Math.floor((prevSeg.x + prevSeg.width + doorSeg.x) / 2) - 15;
+      objects.push({ id: "gen_door", type: "door", x: doorX, y: doorSeg.y - 120, width: 30, height: 120, locked: true, keyId: "gk1" });
+      objectiveTerms.push({ event: "pickup", id: "gen_key" });
+    }
+
+    if (flags.pickup) {
+      var pkSeg = segments[Math.floor(segments.length / 2)];
+      objects.push({ id: "gen_pickup", type: "pickup", x: pkSeg.x + pkSeg.width / 2, y: pkSeg.y - 24, radius: 10 });
+      objectiveTerms.push({ event: "pickup", id: "gen_pickup" });
+    }
+
+    var lastSeg = segments[segments.length - 1];
+    var goalX = lastSeg.x + lastSeg.width - 80;
+    var goalY = lastSeg.y - 90;
+
+    return {
+      world: { width: Math.max(1400, goalX + 150), height: 720 },
+      playerStart: { x: 40, y: GROUND_Y - 40 },
+      goalZone: { x: goalX, y: goalY, width: 70, height: 90 },
+      objective: objectiveTerms.length > 1 ? { and: objectiveTerms } : objectiveTerms[0],
+      objects: objects,
+      segments: segments
+    };
+  }
+
+  function checkReachable(candidate) {
+    // Every consecutive segment-to-segment hop must be within a safe jump
+    // envelope -- the same bound the generator itself builds within, checked
+    // independently here rather than just trusted, matching the spirit of
+    // running a separate validator instead of assuming the generator got it
+    // right. A candidate the generator itself produced should always pass;
+    // this exists as a real gate, not a formality.
+    var MAX_SAFE_RISE_DELTA = 160, MAX_SAFE_GAP = 220;
+    var segs = candidate.segments;
+    for (var i = 1; i < segs.length; i++) {
+      var gap = segs[i].x - (segs[i - 1].x + segs[i - 1].width);
+      var riseDelta = Math.abs(segs[i].rise - segs[i - 1].rise);
+      if (gap > MAX_SAFE_GAP || riseDelta > MAX_SAFE_RISE_DELTA) return false;
+    }
+    return true;
+  }
+
+  function mulberry32(seed) {
+    return function () {
+      seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+      var t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function buildSceneFromPrompt(text) {
+    var flags = parsePrompt(text);
+    var candidate = null;
+    for (var attempt = 0; attempt < 20; attempt++) {
+      var rng = mulberry32((Date.now() + attempt * 7919) >>> 0);
+      var c = buildCandidateScene(flags, rng);
+      if (checkReachable(c)) { candidate = c; break; }
+    }
+    if (!candidate) candidate = buildCandidateScene(flags, mulberry32(Date.now() >>> 0)); // shouldn't happen given the safe bounds, but never hand back nothing
+    return { scene: candidate, flags: flags };
+  }
+
+  var MOVE_SPEED = 260, JUMP_SPEED = 560, GRAVITY = 900, DT = 1 / 60;
+  var PLAYER_W = 28, PLAYER_H = 40;
+
+  var FOCAL = 320, MIN_SCALE = 0.04, MAX_RENDER_DISTANCE = 1400, EYE_HEIGHT_FRAC = 0.55;
+  var OPENING_WIDTH_FRAC = 0.42, OPENING_HEIGHT_FRAC = 0.5;
+  var N_WALL_SEAMS = 4, N_FLOOR_LINES = 7, N_FLOOR_VERTICALS = 5;
+  var PARALLAX_PERIOD_PX = 2000;
+
+  var COLORS = {
+    bg: "rgb(24,26,34)",
+    platform: "rgb(90,96,112)",
+    door_locked: "rgb(214,138,62)",
+    door_open: "rgb(87,214,138)",
+    hazard: "rgb(227,90,90)",
+    key: "rgb(232,201,60)",
+    pickup: "rgb(77,143,224)",
+    goal: "rgb(87,214,138)",
+    player: "rgb(240,240,245)"
+  };
+
+  var SKY_TOP = [10, 11, 15], SKY_BOTTOM = [22, 23, 32];
+  var GROUND_NEAR = [42, 38, 30], GROUND_FAR = [20, 20, 24];
+  var WALL_NEAR = [52, 50, 58], WALL_FAR = [26, 25, 30], WALL_SEAM = [14, 14, 18];
+  var FLOOR_GRID = [16, 15, 13];
+  var PARALLAX = [17, 18, 24];
+
+  function lerpColor(a, b, t) {
+    return "rgb(" + a.map(function (v, i) { return Math.round(v + (b[i] - v) * t); }).join(",") + ")";
+  }
+  function darken(rgbStr, amount) {
+    var m = rgbStr.match(/\d+/g).map(Number);
+    return "rgb(" + m.map(function (v) { return Math.round(v * (1 - amount)); }).join(",") + ")";
+  }
+
+  var fpCanvas = document.getElementById("fpCanvas"), fpCtx = fpCanvas.getContext("2d");
+  var tdCanvas = document.getElementById("tdCanvas"), tdCtx = tdCanvas.getContext("2d");
+  var overlay = document.getElementById("overlay"), overlayBig = document.getElementById("overlayBig");
+  var statusPill = document.getElementById("statusPill");
+  var tickVal = document.getElementById("tickVal"), keysVal = document.getElementById("keysVal");
+  var collectedVal = document.getElementById("collectedVal"), facingVal = document.getElementById("facingVal");
+  var tickerText = document.getElementById("tickerText");
+
+  var state, input, tickerTtl;
+
+  function freshState() {
+    return {
+      x: SCENE.playerStart.x, y: SCENE.playerStart.y, vx: 0, vy: 0, grounded: false,
+      heading: "right", collected: {}, heldKeys: {}, doorOpen: false,
+      result: null, tick: 0
+    };
+  }
+
+  function loadScene(newScene, sourcePrompt) {
+    SCENE = newScene;
+    REQUIRED_PICKUPS = objectivePickupIds(SCENE.objective);
+    resetGame();
+    if (sourcePrompt !== undefined) {
+      tickerText.textContent = "generated from \"" + sourcePrompt + "\" -- objective: " + describeObjective(SCENE.objective);
+      tickerTtl = 240;
+    }
+  }
+
+  function resetGame() {
+    state = freshState();
+    input = { left: false, right: false, jumpQueued: false };
+    tickerTtl = 0;
+    tickerText.textContent = "objective: " + describeObjective(SCENE.objective);
+    overlay.classList.remove("show");
+    statusPill.textContent = "running";
+    statusPill.className = "status-pill";
+  }
+
+  function announce(text) {
+    tickerText.textContent = text;
+    tickerTtl = 90;
+  }
+
+  function solids() {
+    var list = SCENE.objects.filter(function (o) { return o.type === "platform"; });
+    var door = SCENE.objects.filter(function (o) { return o.type === "door"; })[0];
+    if (door && door.locked && !state.doorOpen) list.push(door);
+    return list;
+  }
+
+  function overlap(px, py, sx, sy, sw, sh) {
+    return px < sx + sw && sx < px + PLAYER_W && py < sy + sh && sy < py + PLAYER_H;
+  }
+
+  function stepPhysics() {
+    if (state.result !== null) return;
+    state.tick++;
+
+    var vx = 0;
+    if (input.left && !input.right) { vx = -MOVE_SPEED; state.heading = "left"; }
+    else if (input.right && !input.left) { vx = MOVE_SPEED; state.heading = "right"; }
+    state.vx = vx;
+
+    if (input.jumpQueued && state.grounded) { state.vy = -JUMP_SPEED; }
+    input.jumpQueued = false;
+
+    // horizontal
+    state.x += state.vx * DT;
+    state.x = Math.max(0, Math.min(SCENE.world.width - PLAYER_W, state.x));
+    var s, i;
+    var sol = solids();
+    for (i = 0; i < sol.length; i++) {
+      s = sol[i];
+      if (overlap(state.x, state.y, s.x, s.y, s.width, s.height)) {
+        if (state.vx > 0) state.x = s.x - PLAYER_W;
+        else if (state.vx < 0) state.x = s.x + s.width;
+      }
+    }
+
+    // vertical
+    state.vy += GRAVITY * DT;
+    state.y += state.vy * DT;
+    state.grounded = false;
+    for (i = 0; i < sol.length; i++) {
+      s = sol[i];
+      if (overlap(state.x, state.y, s.x, s.y, s.width, s.height)) {
+        if (state.vy > 0) { state.y = s.y - PLAYER_H; state.vy = 0; state.grounded = true; }
+        else if (state.vy < 0) { state.y = s.y + s.height; state.vy = 0; }
+      }
+    }
+
+    // hazards
+    var hazards = SCENE.objects.filter(function (o) { return o.type === "hazard"; });
+    for (i = 0; i < hazards.length; i++) {
+      var h = hazards[i];
+      if (overlap(state.x, state.y, h.x, h.y, h.width, h.height)) {
+        state.result = "death";
+        announce("died (hazard)");
+      }
+    }
+
+    // collectibles
+    var collectibles = SCENE.objects.filter(function (o) { return o.type === "key" || o.type === "pickup"; });
+    for (i = 0; i < collectibles.length; i++) {
+      var c = collectibles[i];
+      if (state.collected[c.id]) continue;
+      var r = c.radius;
+      if (overlap(state.x, state.y, c.x - r, c.y - r, r * 2, r * 2)) {
+        state.collected[c.id] = true;
+        announce("picked up " + c.id);
+        if (c.type === "key") {
+          state.heldKeys[c.keyId] = true;
+          var door = SCENE.objects.filter(function (o) { return o.type === "door"; })[0];
+          if (door && door.keyId === c.keyId) {
+            state.doorOpen = true;
+            announce("door " + door.id + " opened");
+          }
+        }
+      }
+    }
+
+    // goal -- evaluated the same way schema/objective_eval.py does: a
+    // synthetic event log (collected pickups + zone_enter if currently
+    // inside it) run through the real and/or/leaf predicate tree, not a
+    // hardcoded id check.
+    var gz = SCENE.goalZone;
+    var insideGoal = overlap(state.x, state.y, gz.x, gz.y, gz.width, gz.height);
+    var syntheticLog = Object.keys(state.collected).map(function (id) { return { event: "pickup", id: id }; });
+    if (insideGoal) syntheticLog.push({ event: "zone_enter", id: "goal_zone" });
+    if (evaluateObjective(SCENE.objective, syntheticLog)) {
+      state.result = "success";
+      announce("zone_enter -- objective satisfied");
+    }
+
+    if (state.result) {
+      statusPill.textContent = state.result === "success" ? "success" : "died";
+      statusPill.className = "status-pill " + (state.result === "success" ? "win" : "dead");
+      overlayBig.textContent = state.result === "success" ? "YOU WIN" : "YOU DIED";
+      overlayBig.className = "big " + (state.result === "success" ? "win" : "dead");
+      overlay.classList.add("show");
+    }
+
+    if (tickerTtl > 0) {
+      tickerTtl--;
+      if (tickerTtl === 0) tickerText.textContent = "objective: " + describeObjective(SCENE.objective);
+    }
+  }
+
+  function playerCenter() { return { x: state.x + PLAYER_W / 2, y: state.y + PLAYER_H / 2 }; }
+
+  function visibleFeatures() {
+    var pc = playerCenter();
+    var direction = state.heading === "right" ? 1 : -1;
+    var feats = [];
+    SCENE.objects.forEach(function (o) {
+      if (o.id === "ground") return;
+      if (state.collected[o.id]) return;
+      var cx = o.width !== undefined ? o.x + o.width / 2 : o.x;
+      var dx = (cx - pc.x) * direction;
+      if (dx <= 0 || dx > MAX_RENDER_DISTANCE) return;
+      var cy = o.height !== undefined ? o.y + o.height / 2 : o.y;
+      var colorKey = o.type;
+      if (o.type === "door") colorKey = state.doorOpen ? "door_open" : "door_locked";
+      var size = o.width !== undefined ? o.width : o.radius * 2;
+      var height = o.height !== undefined ? o.height : o.radius * 2;
+      feats.push({ distance: dx, centerY: cy, size: size, height: height, color: COLORS[colorKey], type: o.type });
+    });
+    var gz = SCENE.goalZone;
+    var gcx = gz.x + gz.width / 2;
+    var gdx = (gcx - pc.x) * direction;
+    if (gdx > 0 && gdx <= MAX_RENDER_DISTANCE) {
+      feats.push({ distance: gdx, centerY: gz.y + gz.height / 2, size: gz.width, height: gz.height, color: COLORS.goal, type: "goal_zone" });
+    }
+    feats.sort(function (a, b) { return b.distance - a.distance; });
+    return feats;
+  }
+
+  function drawParallax(ctx, w, horizonY, playerX) {
+    var offset = (playerX * 0.08) % PARALLAX_PERIOD_PX;
+    var peakH = horizonY * 0.35;
+    var spacing = 130;
+    var start = -(Math.floor(offset) % spacing) - spacing;
+    ctx.fillStyle = "rgb(" + PARALLAX.join(",") + ")";
+    for (var x = start; x < w + spacing; x += spacing) {
+      ctx.beginPath();
+      ctx.moveTo(x, horizonY);
+      ctx.lineTo(x + spacing * 0.5, horizonY - peakH);
+      ctx.lineTo(x + spacing, horizonY);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  function drawFloorGrid(ctx, w, h, horizonY) {
+    var floorH = h - horizonY;
+    ctx.strokeStyle = "rgb(" + FLOOR_GRID.join(",") + ")";
+    ctx.lineWidth = 1;
+    for (var i = 1; i <= N_FLOOR_LINES; i++) {
+      var t = Math.pow(i / N_FLOOR_LINES, 2);
+      var y = horizonY + floorH * t;
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    }
+    var vpx = w / 2;
+    for (i = 0; i <= N_FLOOR_VERTICALS; i++) {
+      var bx = w * i / N_FLOOR_VERTICALS;
+      ctx.beginPath(); ctx.moveTo(vpx, horizonY); ctx.lineTo(bx, h); ctx.stroke();
+    }
+  }
+
+  function drawWalls(ctx, w, h, horizonY) {
+    var openingW = w * OPENING_WIDTH_FRAC, openingH = h * OPENING_HEIGHT_FRAC;
+    var ol = w / 2 - openingW / 2, orr = w / 2 + openingW / 2;
+    var ot = horizonY - openingH / 2, ob = horizonY + openingH / 2;
+
+    ctx.fillStyle = "rgb(" + WALL_NEAR.join(",") + ")";
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(ol, ot); ctx.lineTo(ol, ob); ctx.lineTo(0, h); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(w, 0); ctx.lineTo(orr, ot); ctx.lineTo(orr, ob); ctx.lineTo(w, h); ctx.closePath(); ctx.fill();
+
+    for (var i = 1; i <= N_WALL_SEAMS; i++) {
+      var t = i / (N_WALL_SEAMS + 1);
+      ctx.strokeStyle = lerpColor(WALL_NEAR, WALL_FAR, t);
+      var lx = 0 + (ol - 0) * t, lyTop = 0 + (ot - 0) * t, lyBot = h + (ob - h) * t;
+      ctx.beginPath(); ctx.moveTo(lx, lyTop); ctx.lineTo(lx, lyBot); ctx.stroke();
+      var rx = w + (orr - w) * t;
+      ctx.beginPath(); ctx.moveTo(rx, lyTop); ctx.lineTo(rx, lyBot); ctx.stroke();
+    }
+    ctx.strokeStyle = "rgb(" + WALL_SEAM.join(",") + ")"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(ol, ot); ctx.lineTo(ol, ob); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(orr, ot); ctx.lineTo(orr, ob); ctx.stroke();
+    ctx.lineWidth = 1;
+  }
+
+  function renderFirstPerson() {
+    var w = fpCanvas.width, h = fpCanvas.height;
+    var horizonY = h * EYE_HEIGHT_FRAC;
+    var pc = playerCenter();
+
+    var skyGrad = fpCtx.createLinearGradient(0, 0, 0, horizonY);
+    skyGrad.addColorStop(0, "rgb(" + SKY_TOP.join(",") + ")");
+    skyGrad.addColorStop(1, "rgb(" + SKY_BOTTOM.join(",") + ")");
+    fpCtx.fillStyle = skyGrad;
+    fpCtx.fillRect(0, 0, w, horizonY);
+
+    var groundGrad = fpCtx.createLinearGradient(0, horizonY, 0, h);
+    groundGrad.addColorStop(0, "rgb(" + GROUND_NEAR.join(",") + ")");
+    groundGrad.addColorStop(1, "rgb(" + GROUND_FAR.join(",") + ")");
+    fpCtx.fillStyle = groundGrad;
+    fpCtx.fillRect(0, horizonY, w, h - horizonY);
+
+    drawParallax(fpCtx, w, horizonY, pc.x);
+    drawFloorGrid(fpCtx, w, h, horizonY);
+    drawWalls(fpCtx, w, h, horizonY);
+
+    visibleFeatures().forEach(function (f) {
+      var scale = Math.max(MIN_SCALE, FOCAL / (f.distance + FOCAL));
+      var fw = Math.max(2, f.size * scale), fh = Math.max(2, f.height * scale);
+      var screenY = horizonY + (f.centerY - pc.y) * scale;
+      var fog = Math.min(1, f.distance / MAX_RENDER_DISTANCE);
+      var color = darken(f.color, 0.6 * fog);
+      fpCtx.fillStyle = color;
+      if (f.type === "key" || f.type === "pickup") {
+        fpCtx.beginPath();
+        fpCtx.arc(w / 2, screenY, Math.max(2, fw / 2), 0, Math.PI * 2);
+        fpCtx.fill();
+      } else {
+        fpCtx.fillRect(w / 2 - fw / 2, screenY - fh / 2, fw, fh);
+      }
+    });
+  }
+
+  function renderTopDown() {
+    var w = tdCanvas.width, h = tdCanvas.height;
+    var scale = w / SCENE.world.width;
+    tdCtx.fillStyle = COLORS.bg;
+    tdCtx.fillRect(0, 0, w, h);
+
+    var gz = SCENE.goalZone;
+    tdCtx.strokeStyle = COLORS.goal; tdCtx.lineWidth = 1.5;
+    tdCtx.strokeRect(gz.x * scale, gz.y * scale, gz.width * scale, gz.height * scale);
+
+    SCENE.objects.forEach(function (o) {
+      if (o.type === "platform") {
+        tdCtx.fillStyle = COLORS.platform;
+        tdCtx.fillRect(o.x * scale, o.y * scale, o.width * scale, o.height * scale);
+      } else if (o.type === "door") {
+        tdCtx.fillStyle = state.doorOpen ? COLORS.door_open : COLORS.door_locked;
+        tdCtx.fillRect(o.x * scale, o.y * scale, o.width * scale, o.height * scale);
+      } else if (o.type === "hazard") {
+        tdCtx.fillStyle = COLORS.hazard;
+        tdCtx.fillRect(o.x * scale, o.y * scale, o.width * scale, o.height * scale);
+      } else if ((o.type === "key" || o.type === "pickup") && !state.collected[o.id]) {
+        tdCtx.fillStyle = COLORS[o.type];
+        tdCtx.beginPath();
+        tdCtx.arc(o.x * scale, o.y * scale, Math.max(1.5, o.radius * scale), 0, Math.PI * 2);
+        tdCtx.fill();
+      }
+    });
+
+    tdCtx.fillStyle = COLORS.player;
+    tdCtx.fillRect(state.x * scale, state.y * scale, PLAYER_W * scale, PLAYER_H * scale);
+  }
+
+  function renderHud() {
+    tickVal.textContent = state.tick;
+    var keys = Object.keys(state.heldKeys);
+    keysVal.textContent = keys.length ? keys.join(", ") : "—";
+    var n = REQUIRED_PICKUPS.filter(function (id) { return state.collected[id]; }).length;
+    collectedVal.textContent = n + "/" + REQUIRED_PICKUPS.length;
+    facingVal.textContent = state.heading;
+  }
+
+  function render() {
+    renderFirstPerson();
+    renderTopDown();
+    renderHud();
+  }
+
+  // -- input --
+  var promptInput = document.getElementById("promptInput");
+  var generateBtn = document.getElementById("generateBtn");
+
+  function runGenerate() {
+    var text = promptInput.value.trim() || promptInput.placeholder;
+    var built = buildSceneFromPrompt(text);
+    loadScene(built.scene, text);
+    fpCanvas.focus();
+  }
+
+  window.addEventListener("keydown", function (e) {
+    if (document.activeElement === promptInput) {
+      if (e.key === "Enter") { runGenerate(); promptInput.blur(); }
+      return;
+    }
+    if (e.key === "ArrowLeft") { input.left = true; e.preventDefault(); }
+    else if (e.key === "ArrowRight") { input.right = true; e.preventDefault(); }
+    else if (e.key === " " || e.key === "ArrowUp") { input.jumpQueued = true; e.preventDefault(); }
+    else if (e.key === "r" || e.key === "R") { resetGame(); }
+  });
+  window.addEventListener("keyup", function (e) {
+    if (document.activeElement === promptInput) return;
+    if (e.key === "ArrowLeft") input.left = false;
+    else if (e.key === "ArrowRight") input.right = false;
+  });
+  document.getElementById("restartBtn").addEventListener("click", resetGame);
+  generateBtn.addEventListener("click", runGenerate);
+  fpCanvas.addEventListener("click", function () { fpCanvas.focus(); });
+
+  // -- loop --
+  var last = null, acc = 0;
+  function loop(now) {
+    requestAnimationFrame(loop);
+    if (last === null) last = now;
+    var delta = (now - last) / 1000;
+    last = now;
+    if (delta > 0.25) delta = 0.25;
+    acc += delta;
+    while (acc >= DT) { stepPhysics(); acc -= DT; }
+    render();
+  }
+
+  resetGame();
+  requestAnimationFrame(loop);
+})();
+</script>
+
+</body>
+</html>

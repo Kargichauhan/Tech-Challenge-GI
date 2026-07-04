@@ -1,8 +1,8 @@
 # Infinite Environment Generation via an Agent Harness
 
-![Dual-render demo: top-down + first-person view of a generated scene](docs/demo.gif)
+### ▶ [**Live, playable dashboard — click and play, no setup**](https://kargichauhan.github.io/Tech-Challenge-GI/)
 
-*Top-down (left) and the corridor-perspective first-person view (right) rendering the same generated scene in sync — output of `run_dataset_export.py`, unedited.*
+Type a text prompt, get a generated environment, walk through it in first-person, right in your browser — hosted permanently from this repo's `docs/` folder via GitHub Pages, not a session-bound link.
 
 **At a glance** (full detail below):
 - A **real physics engine** (pymunk), not prompt-level tricks — gravity, jump arcs, collision.
@@ -10,7 +10,6 @@
 - A second agent **actively tries to game the win condition** — and sometimes succeeds; every scene reports whether it was gamed and how.
 - Three different agents play the same levels: a hand-built honest solver, a hand-built adversarial solver, and a **tabular Q-learner that trains from scratch** with a real learning curve.
 - An **invention loop** that mutates/revises scenes on its own (including changing the objective's shape, not just the layout) and keeps a MAP-Elites archive of what it finds.
-- Two **live, playable browser demos** — no setup, click and play: [a real generated maze](https://claude.ai/code/artifact/bf8de770-32b9-439d-8e83-1c24bf156dc2) you can walk through in first-person, and a [setup/run guide](https://claude.ai/code/artifact/f2f54264-df17-4fde-ae3a-5a7e5b2fd539).
 
 ## Requirements ↔ what we built
 
