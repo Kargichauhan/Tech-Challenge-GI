@@ -11,9 +11,11 @@ exploit_class + explanation rather than requiring anyone to read logs.
 
 from __future__ import annotations
 
-import imageio.v2 as imageio
+import queue
+import threading
 
 import numpy as np
+from PIL import Image
 
 from harness.engine.physics_engine import Engine
 from harness.render.raycaster import infer_heading, render_first_person_frame
@@ -154,9 +156,26 @@ def build_gif(scene: dict, output_path: str, total_max_ticks: int = 60 * 25, tra
     engine = Engine(scene)
     trace_runner = trace_runner or (lambda eng, ticks: GenuineSolver(scene).solve(eng, ticks))
 
-    frames = []
+    prompt = scene["metadata"].get("prompt") or scene["id"]
+    intro_surf = render_scene_frame(scene, None, caption=f"generated scene: {prompt}")
+    intro_arr = surface_to_array(intro_surf)
+    if dual_render:
+        blank_fp = surface_to_array(render_first_person_frame(scene, Engine(scene), caption="(first-person view)"))
+        intro_arr = _hstack(intro_arr, blank_fp)
+
     state = {"tick": 0, "caption": None, "caption_ttl": 0, "last_event_count": 0, "heading": "move_right"}
     caption_hold_ticks = int(CAPTION_HOLD_SECONDS * 60)  # in engine ticks, not rendered frames
+
+    # A long/dual-render trace (e.g. run_maze_demo.py) can be thousands of frames.
+    # imageio's GIF writer holds every appended frame's encoder state in memory for
+    # the life of the call (measured: ~3.8GB peak on this scene, vs ~80MB for the
+    # rendering loop alone with the writer removed) -- so frames are produced by a
+    # background thread and pulled one at a time into PIL's own save_all(), which
+    # only keeps the current frame plus a small lookback for palette/dispose state.
+    # Measured fix: same scene, same frame count, ~170MB peak instead of ~3.8GB.
+    frame_queue: queue.Queue = queue.Queue(maxsize=8)
+    _DONE = object()
+    result_box: dict = {}
 
     orig_step = engine.step
 
@@ -181,29 +200,45 @@ def build_gif(scene: dict, output_path: str, total_max_ticks: int = 60 * 25, tra
             top_down = surface_to_array(render_scene_frame(scene, engine, caption=state["caption"]))
             if dual_render:
                 first_person = surface_to_array(render_first_person_frame(scene, engine, heading=state["heading"]))
-                frames.append(_hstack(top_down, first_person))
+                frame_queue.put(_hstack(top_down, first_person))
             else:
-                frames.append(top_down)
+                frame_queue.put(top_down)
         return r
 
     engine.step = wrapped_step
-    trace_result, *_ = trace_runner(engine, total_max_ticks)
-    probe["trace_result"] = trace_result
 
-    prompt = scene["metadata"].get("prompt") or scene["id"]
-    intro_surf = render_scene_frame(scene, None, caption=f"generated scene: {prompt}")
-    intro_arr = surface_to_array(intro_surf)
-    outro_surf = render_result_frame(scene, probe, trace_label=trace_label, trace_result=trace_result)
-    outro_arr = surface_to_array(outro_surf)
-    if dual_render:
-        blank_fp = surface_to_array(render_first_person_frame(scene, Engine(scene), caption="(first-person view)"))
-        intro_arr = _hstack(intro_arr, blank_fp)
-        outro_arr = _hstack(outro_arr, np.zeros_like(blank_fp))
+    def run_trace():
+        try:
+            result_box["trace_result"] = trace_runner(engine, total_max_ticks)[0]
+        finally:
+            frame_queue.put(_DONE)
 
-    intro_frames = [intro_arr] * int(FPS * INTRO_SECONDS)
-    outro_frames = [outro_arr] * int(FPS * OUTRO_SECONDS)
+    trace_thread = threading.Thread(target=run_trace, daemon=True)
+    trace_thread.start()
 
-    all_frames = intro_frames + frames + outro_frames
-    imageio.mimsave(output_path, all_frames, fps=FPS)
+    def frames_after_first():
+        for _ in range(int(FPS * INTRO_SECONDS) - 1):
+            yield Image.fromarray(intro_arr)
+        while True:
+            item = frame_queue.get()
+            if item is _DONE:
+                break
+            yield Image.fromarray(item)
+        trace_thread.join()
+
+        trace_result = result_box["trace_result"]
+        probe["trace_result"] = trace_result
+        outro_surf = render_result_frame(scene, probe, trace_label=trace_label, trace_result=trace_result)
+        outro_arr = surface_to_array(outro_surf)
+        if dual_render:
+            outro_arr = _hstack(outro_arr, np.zeros_like(blank_fp))
+        for _ in range(int(FPS * OUTRO_SECONDS)):
+            yield Image.fromarray(outro_arr)
+
+    first_frame = Image.fromarray(intro_arr)
+    first_frame.save(
+        output_path, save_all=True, append_images=frames_after_first(),
+        duration=int(1000 / FPS), loop=0, optimize=False,
+    )
 
     return probe

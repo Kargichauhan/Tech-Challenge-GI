@@ -1,9 +1,10 @@
 # Session Writeup: Infinite Environment Generation via an Agent Harness
 
-A narrative account of what was built for the General Intuition tech challenge,
-in the order it happened — including the checkpoints, the bugs found along the
-way, and the current state. For the architecture reference itself, see
-`README.md`; this document is the story of how it got there.
+**Optional session log — not required reading.** `README.md` is the complete,
+self-sufficient submission (architecture, requirements mapping, quickstart,
+results). This document is a narrative account of *how* it got there: the
+checkpoints, the bugs found along the way, and the reasoning behind decisions.
+Read it only if you want the story behind the results, not to evaluate them.
 
 ## The brief and the framing
 

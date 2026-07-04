@@ -1,9 +1,9 @@
 """
-Explore -> play -> work -> exploit orchestration. This is the package the
-user has authorized calling "recursive self-improvement" for -- everything
-elsewhere in the repo (generation/policy_adaptation.py in particular) keeps
-its existing, accurate, simpler description; see README's Naming section for
-the explicit scoping.
+Explore -> play -> work -> exploit orchestration. This is the package this
+submission calls the "open-ended invention loop" -- everything elsewhere in
+the repo (generation/policy_adaptation.py in particular) keeps its existing,
+accurate, simpler description; see README's Naming section for the explicit
+scoping.
 
   explore  -- explore_propose: pick a parent from the archive, mutate it
               (mutation.py; optionally revised by an LLM first, see

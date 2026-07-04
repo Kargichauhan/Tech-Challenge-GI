@@ -1,15 +1,29 @@
 # Infinite Environment Generation via an Agent Harness
 
-### ▶ [**Live, playable dashboard — click and play, no setup**](https://claude.ai/code/artifact/bf8de770-32b9-439d-8e83-1c24bf156dc2)
+### ▶ [**Live, playable dashboard — click and play, no login, no setup**](https://kargichauhan.github.io/Tech-Challenge-GI/)
 
-Type a text prompt, get a generated environment, walk through it in first-person, right in your browser. Source lives at [`docs/index.html`](docs/index.html), served permanently via GitHub Pages at [kargichauhan.github.io/Tech-Challenge-GI](https://kargichauhan.github.io/Tech-Challenge-GI/) — if that link is still mid-deploy, the link above is the same demo, live now.
+Type a text prompt, get a generated environment, walk through it in first-person, right in your browser. Hosted permanently from this repo's [`docs/index.html`](docs/index.html) via GitHub Pages — a public URL, not a login-gated link.
 
 **At a glance** (full detail below):
 - A **real physics engine** (pymunk), not prompt-level tricks — gravity, jump arcs, collision.
 - Text → a validated, playable environment in **one command, no API key needed**.
-- A second agent **actively tries to game the win condition** — and sometimes succeeds; every scene reports whether it was gamed and how.
+- A second agent **actively tries to reward-hack the win condition** — and sometimes succeeds; every scene reports whether it was gamed and how (this is the verifier-robustness problem reward-model training lives and dies on).
 - Three different agents play the same levels: a hand-built honest solver, a hand-built adversarial solver, and a **tabular Q-learner that trains from scratch** with a real learning curve.
 - An **invention loop** that mutates/revises scenes on its own (including changing the objective's shape, not just the layout) and keeps a MAP-Elites archive of what it finds.
+
+**Run it** (guaranteed path — no API key, no network):
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install pymunk pygame imageio jsonschema networkx matplotlib anthropic
+python3 run_demo.py
+```
+
+Generates 7 environments across the primitive library, runs the genuine solver and the adversarial verifier-probe on each, and writes one self-contained GIF per environment to `runs/demo/*.gif` (generated scene → agent trace → verifier-robustness result, readable in well under 30 seconds). Fully deterministic, no external dependency — this is the path reviewers should run.
+
+*Everything below this line is detail — the requirements mapping, architecture, and honestly-reported results, in case you want to go deeper.*
+
+---
 
 ## Requirements ↔ what we built
 
@@ -23,7 +37,7 @@ Type a text prompt, get a generated environment, walk through it in first-person
 | Code-level objectives ("picked up the can from the table") | `harness/schema/`'s event-log + boolean-predicate objective language — checked in code, never guessed from pixels. The exact brief example is a real demo scene in `run_demo.py` |
 | Reward model bridge (code-truth → pixel understanding) | `harness/render/dataset_emitter.py` exports real `(frame, action, reward)` tuples in the challenge's own action vocabulary; a real torch CNN reaches held-out **R²=0.32** and roughly halves the error on the rare success/pickup events that actually matter, versus blind guessing — see below for the full, honestly-reported story, including a real sampling bug found and fixed along the way |
 | Vision-policy's action space (move fwd/back/left/right, mouse ΔX/ΔY) | `harness/render/raycaster.py` — a first-person view + `dataset_emitter.py`'s explicit mapping onto that exact vocabulary |
-| Creativity | The adversarial exploit classifier, the invention loop's objective-shape mutations, the MAP-Elites archive, and the two live playable browser demos below |
+| Creativity | The adversarial exploit classifier, the invention loop's objective-shape mutations, the MAP-Elites archive, and the live playable browser dashboard above |
 | Clarity / working output | Seven runnable entry points (table below), all verified working, guaranteed path needs no API key |
 
 ## Alignment with the brief's "Why This Matters" (verbatim structure)
@@ -31,7 +45,7 @@ Type a text prompt, get a generated environment, walk through it in first-person
 The brief names exactly three reasons this problem matters to GI's research. Mapped 1:1, in their own order:
 
 1. **Post-training environments** — a supply of diverse environments for training/evaluating a vision policy on specific goals and rewards.
-   → `harness/generation/policy_adaptation.py` (weighted resampling over verified combos) **and** `harness/invention/` (a MAP-Elites archive that mutates/revises scenes on its own — the piece we've explicitly labeled "recursive self-improvement," scoped to this package; see Naming below). Both are runnable end to end with no API key.
+   → `harness/generation/policy_adaptation.py` (weighted resampling over verified combos) **and** `harness/invention/` (a MAP-Elites archive that mutates/revises scenes on its own — the piece we call the "open-ended invention loop," scoped to this package; see Naming below). Both are runnable end to end with no API key.
 
 2. **Code-level objectives** — e.g. "successfully picked up the can from the table," verified in code, not guessed from pixels.
    → `harness/schema/`'s event-log + boolean-predicate objective language. The brief's exact example is a real scene in `run_demo.py` (a `pickup` primitive on a `platform`, objective `{"and": [zone_enter, pickup]}` — checked against the engine's structured event log, never a VLM).
@@ -60,28 +74,13 @@ back in two ways, at two different scales:
   combinations ("**generation-policy adaptation**" — see Naming below), and
 - an **invention loop** that mutates/revises scenes freely (not just resampling
   a fixed list), scores them by regret and exploit-resistance, and keeps the
-  best-found scene per behavior cell in a MAP-Elites archive — the piece this
-  submission's Naming section authorizes calling "recursive self-improvement,"
-  scoped to exactly that new package (see below).
+  best-found scene per behavior cell in a MAP-Elites archive — called the
+  "open-ended invention loop" in this submission, scoped to exactly that new
+  package (see Naming below).
 
 Both mechanisms are real, both are runnable with no API key, and neither
 replaces the other — the fixed-combo sampler stays exactly as accurate a
 description of itself as it always was.
-
-## Quickstart (guaranteed path — no API key, no network)
-
-```bash
-python3 -m venv .venv && source .venv/bin/activate
-pip install pymunk pygame imageio jsonschema networkx matplotlib anthropic
-python3 run_demo.py
-```
-
-Generates 6 environments across the primitive library, runs the genuine solver
-and the adversarial verifier-probe on each, and writes one self-contained GIF
-per environment to `runs/demo/*.gif` (generated scene → agent trace → verifier-
-robustness result, readable in well under 30 seconds) plus `runs/demo/summary.json`.
-This is the path reviewers should run — it has no external dependency and is
-fully deterministic (same seeds → same scenes every time).
 
 ## The runnable entry points
 
@@ -233,9 +232,9 @@ can never invent a scene that isn't already on that list, and it never touches
 the *shape* of the objective predicate. `harness/invention/` is a second,
 independent mechanism that can: it mutates or Claude-revises scenes freely, keeps
 a standing archive of the best-found scene per behavior cell, and grows that
-archive round over round. This is the piece authorized to be called
-**"recursive self-improvement"** — see Naming below for exactly how far that
-scoping goes.
+archive round over round. This is the piece called the
+**"open-ended invention loop"** — see Naming below for exactly what that
+scoping means.
 
 Loosely modeled on published open-ended-learning research — ACCEL, POET, PLR,
 and UED/PAIRED for the mutate-and-keep-the-hardest-still-solvable idea; POET and
@@ -390,15 +389,15 @@ exactly as accurately today as it always did: a sampling distribution over a
 fixed combo list, reweighted from measured stats. That description doesn't
 change just because a second, more ambitious mechanism exists alongside it.
 
-**"Recursive self-improvement"** is used for `harness/invention/` specifically
-— explicitly authorized for this new package, and scoped to it: the invention
-loop invents scenes outside any fixed list, scores them by regret and
-exploit-resistance against a standing archive, and grows that archive round
-over round without human intervention between rounds. It is still bounded —
-a fixed move registry, a fixed archive shape, no code executes or modifies
-itself — but "the generator's own output feeds back into what the generator
-tries next, without a human picking the next target" is the actual mechanism,
-not a euphemism for it.
+**"Open-ended invention loop"** is used for `harness/invention/` specifically:
+the invention loop invents scenes outside any fixed list, scores them by
+regret and exploit-resistance against a standing archive, and grows that
+archive round over round without human intervention between rounds. It is
+still bounded — a fixed move registry, a fixed archive shape, no code
+executes or modifies itself — so it's named for exactly what it does ("the
+generator's own output feeds back into what the generator tries next,
+without a human picking the next target") rather than reached for a bigger
+term the mechanism doesn't need.
 
 ## Known limitations (stated plainly, not hidden)
 
