@@ -6,7 +6,7 @@
 
 The challenge: build an agent harness that reliably constructs 2D environments from text commands and can navigate through them, with an eye toward the research motivation General Intuition stated directly (infinite generation, code-level verifiable objectives, reward signal, improved generation). The explicit ask was to mirror that framing back at them using their own language, not bolt something unrelated on top.
 
-## The plan we locked in
+## The plan
 
 Before writing code, we agreed on a build order and two checkpoints where I'd stop and show the design before it became load-bearing for anything else:
 
