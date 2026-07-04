@@ -14,7 +14,7 @@ PRIMITIVE_TYPES = ["platform", "ramp", "door", "key", "hazard", "pickup"]
 # Reserved for later once the core 6 work end to end (per plan, not built yet):
 FUTURE_PRIMITIVE_TYPES = ["moving_platform", "timed_pickup"]
 
-# --- per-primitive-type field schemas -------------------------------------
+# Per-primitive-type field schemas.
 
 _platform = {
     "properties": {
@@ -78,7 +78,7 @@ _TYPE_FIELD_SCHEMAS = {
     "pickup": _pickup,
 }
 
-# --- object schema (dispatches on "type") ----------------------------------
+# Object schema, dispatches on "type".
 
 _object_schema = {
     "type": "object",
@@ -98,7 +98,7 @@ _object_schema = {
     ],
 }
 
-# --- objective predicate schema (recursive; see docs/event_log_schema.md) --
+# Objective predicate schema (recursive; see docs/event_log_schema.md).
 
 _objective_schema = {
     "type": "object",

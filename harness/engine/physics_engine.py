@@ -77,8 +77,6 @@ class Engine:
         self._currently_touching: set = set()
         self._build()
 
-    # -- construction ---------------------------------------------------
-
     def _add_static(self, poly_pts, pos, collision_type, sensor, meta):
         body = pymunk.Body(body_type=pymunk.Body.STATIC)
         body.position = pos
@@ -150,8 +148,6 @@ class Engine:
     @staticmethod
     def _circle_poly(radius, sides=8):
         return [(radius * math.cos(2 * math.pi * i / sides), radius * math.sin(2 * math.pi * i / sides)) for i in range(sides)]
-
-    # -- collision handlers ----------------------------------------------
 
     def _emit(self, event, id_, meta):
         self.event_log.append({"event": event, "id": id_, "t": round(self.t, 4), "meta": meta})
@@ -238,8 +234,6 @@ class Engine:
                 if meta["obj"]["key_id"] in self.held_keys:
                     shape.sensor = True
                     self._emit("door_open", meta["id"], {})
-
-    # -- stepping ---------------------------------------------------------
 
     def step(self, action: str):
         """Advance one tick. Returns True if the episode is over."""

@@ -178,7 +178,7 @@ On top of that real content sits a layer of **cosmetic 2.5D dressing**: side wal
 
 ### The reward model: two runs, an honest finding
 
-**First pass** (`harness/render/train_reward_model.py`): closed-form linear regression on downsampled frames from a single ~74-frame playthrough, with no new dependency at all. It's heavily underdetermined, with far more pixel features than training examples, and that's stated here rather than dressed up.
+**First pass** (`harness/render/train_reward_model.py`): closed-form linear regression on downsampled frames from a single ~74-frame playthrough, with no new dependency at all. It's heavily underdetermined, with far more pixel features than training examples.
 
 **Second pass** (`run_reward_model_v2.py`, `harness/render/train_reward_model_cnn.py`): tests whether the first pass's weakness was a data problem or a model problem, by changing one variable at a time. It generates 30 solved playthroughs across genuinely different scenes and holds out 7 scenes' worth by scene, never seen in training, for a real generalization test. Then it compares the same linear method against a small CNN (torch) on identical data.
 

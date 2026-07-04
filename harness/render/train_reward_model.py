@@ -7,9 +7,9 @@ installing a deep-learning framework purely for one optional stretch
 component isn't worth the dependency weight here. This is closed-form linear
 regression (numpy's lstsq, no new dependency at all) over heavily
 downsampled first-person frames (render/raycaster.py) predicting the
-dataset_emitter's event-log-derived reward: a genuine, honestly-scoped
-stand-in for "reward model learned from pixels," not a CNN, and labeled as
-exactly that everywhere it's reported.
+dataset_emitter's event-log-derived reward: a stand-in for "reward model
+learned from pixels," not a CNN, and labeled as exactly that everywhere
+it's reported.
 
 Known, stated limitation: a single playthrough's dataset (order-100 frames)
 has far fewer examples than the downsampled feature count, so this is

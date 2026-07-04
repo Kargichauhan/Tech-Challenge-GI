@@ -1,10 +1,9 @@
 """
 Regret and exploit-severity scoring for the invention loop.
 
-Scoping note, stated plainly rather than assumed: this repurposes
-"execution gap" as a stand-in for regret. Classic UED regret is oracle
-policy return minus learner policy return, which presumes a policy that's
-actually being trained. Most of this repo has no trainable policy;
+This repurposes "execution gap" as a stand-in for regret. Classic UED
+regret is oracle policy return minus learner policy return, which presumes
+a policy that's actually being trained. Most of this repo has no trainable policy;
 GenuineSolver and AdversarialSolver are both fixed, hand-built strategies
 that never improve. So oracle_par_ticks, a closed-form lower-bound estimate
 computed without running any solver, is compared against GenuineSolver's own

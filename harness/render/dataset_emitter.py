@@ -4,10 +4,10 @@ the actual bridge artifact toward the challenge's vision-policy action space
 (move forward/back/left/right + mouse look), built on top of the corridor-
 perspective raycaster (raycaster.py).
 
-Honest mapping caveat, stated plainly rather than assumed: this world has
-one true movement axis (left/right) plus jump. There is no lateral strafe
-axis and no camera that turns independently of movement. The mapping below
-is a labeled, approximate bridge, not a claim of action-space equivalence:
+This world has one true movement axis (left/right) plus jump: there is no
+lateral strafe axis and no camera that turns independently of movement. The
+mapping below is a labeled, approximate bridge, not a claim of action-space
+equivalence:
   - move_forward / move_backward: our move_left/move_right, resolved
     relative to the heading before this tick. Continuing the same
     direction is "forward," reversing it is "backward" (and simultaneously

@@ -18,8 +18,7 @@ passability, is derived from `collected_ids` via each key object's `key_id`
 field, exactly like the real engine derives it (engine/physics_engine.py's
 key_begin handler).
 
-Two deliberate scoping simplifications, stated plainly rather than silently
-assumed:
+Two deliberate scoping simplifications:
   1. `_simulate_jump` returns None both when an arc grazes solid geometry,
      which is survivable in the real engine (you bonk and fall back), and
      when it grazes lethal geometry, which is fatal. It doesn't distinguish

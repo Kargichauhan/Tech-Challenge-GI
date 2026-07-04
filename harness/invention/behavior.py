@@ -3,14 +3,13 @@ Behavior-space keying for the MAP-Elites archive (archive.py).
 
 A true 4D grid (path-length x interaction-count x rule-shape x
 irreversibility) would be almost empty at the batch sizes this loop actually
-runs (a handful of rounds x a handful of candidates each). Most cells would
-sit at zero forever, and "coverage" would be a meaningless number. Scoping
-decision, stated here rather than silently under-delivered: a **2D primary
-grid** (path-length bin x interaction bin) is the archive's actual indexing
-key; rule-shape signature and irreversibility count are computed but carried
-as per-occupant *metadata* instead, visible in the report and usable for
-qualitative diversity inspection without needing enough data to fill a much
-larger grid.
+runs (a handful of rounds x a handful of candidates each): most cells would
+sit at zero forever, and "coverage" would be a meaningless number. So the
+archive's actual indexing key is a **2D primary grid** (path-length bin x
+interaction bin); rule-shape signature and irreversibility count are
+computed but carried as per-occupant *metadata* instead, visible in the
+report and usable for qualitative diversity inspection without needing
+enough data to fill a much larger grid.
 """
 
 from __future__ import annotations
