@@ -48,22 +48,26 @@
 
   .rig { width: 100%; max-width: min(94vw, 1900px); }
 
-  /* -- two-column dashboard layout -- */
+  /* -- three-column landscape dashboard layout -- */
   .layout {
     display: grid;
-    grid-template-columns: 440px 1fr;
-    gap: 24px;
+    grid-template-columns: minmax(0, 300px) minmax(0, 1.4fr) minmax(0, 300px);
+    gap: 20px;
     align-items: start;
   }
-  .col-viewport {
+  .col-left, .col-right, .col-middle { min-width: 0; }
+  .col-middle {
     border-left: 1px solid var(--bevel);
-    padding-left: 24px;
-    min-width: 0;
+    border-right: 1px solid var(--bevel);
+    padding: 0 20px;
   }
-  .col-controls { min-width: 0; }
-  @media (max-width: 980px) {
+  @media (max-width: 1240px) {
+    .layout { grid-template-columns: 1fr 1fr; }
+    .col-middle { grid-column: 1 / -1; border-left: none; border-right: none; padding: 0; order: -1; margin-bottom: 8px; }
+  }
+  @media (max-width: 720px) {
     .layout { grid-template-columns: 1fr; }
-    .col-viewport { border-left: none; padding-left: 0; margin-top: 8px; }
+    .col-middle { grid-column: auto; order: 0; }
   }
 
   .rig-eyebrow {
@@ -209,12 +213,9 @@
   /* -- scenario card grid -- */
   .scenario-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: 8px;
     margin-bottom: 10px;
-  }
-  @media (max-width: 520px) {
-    .scenario-grid { grid-template-columns: 1fr; }
   }
   .scenario-card {
     text-align: left;
@@ -342,9 +343,13 @@
 
   /* -- viewports -- */
   .viewports {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 12px;
+    align-items: start;
+  }
+  @media (max-width: 640px) {
+    .viewports { grid-template-columns: 1fr; }
   }
   .viewport {
     position: relative;
@@ -493,7 +498,8 @@
 
   <div class="console">
    <div class="layout">
-    <div class="col-controls">
+
+    <div class="col-left">
     <div class="section-label"><span class="step-chip">1</span>choose a scenario</div>
     <div class="scenario-grid" id="scenarioGrid">
       <button class="scenario-card" data-scenario="gameable">
@@ -515,13 +521,62 @@
     </div>
 
     <div class="section-label"><span class="step-chip">2</span>run the comparison</div>
-    <button id="compareBtn" class="compare-btn">&#9654; watch: honest agent vs. adversarial agent</button>
+    <button id="compareBtn" class="compare-btn">&#9654; watch: honest vs. adversarial</button>
     <p class="scenario-note">
       Honest visits whatever the objective requires, in order, and never forces a locked door.
       Adversarial beelines for the goal and rams anything in the way, only fetching what's
       required if ramming truly fails. Same physics, same rules, just a different policy.
     </p>
+    </div>
 
+    <div class="col-middle">
+    <div class="telemetry">
+      <div class="field"><span class="status-pill" id="statusPill">running</span></div>
+      <div class="field"><span class="label">tick</span><span class="value" id="tickVal">0</span></div>
+      <div class="field"><span class="label">held keys</span><span class="value" id="keysVal">—</span></div>
+      <div class="field"><span class="label">collected</span><span class="value" id="collectedVal">0/2</span></div>
+      <div class="spacer"></div>
+      <div class="field"><span class="label">facing</span><span class="value" id="facingVal">right</span></div>
+    </div>
+
+    <div class="viewports">
+      <div class="viewport">
+        <span class="tag">top-down</span>
+        <canvas id="tdCanvas" width="1040" height="360"></canvas>
+      </div>
+      <div class="viewport fp-viewport">
+        <span class="tag">first-person / corridor view</span>
+        <canvas id="fpCanvas" width="720" height="440" tabindex="0" style="outline:none;"></canvas>
+        <div class="overlay-msg" id="overlay">
+          <div class="big" id="overlayBig">YOU WIN</div>
+          <div class="hint">press R, or the button below, to run it again</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-group">
+        <span class="key">←</span><span class="key">→</span>
+        <span class="legend-label">move</span>
+      </div>
+      <div class="legend-group">
+        <span class="key">SPACE</span><span class="key">↑</span>
+        <span class="legend-label">jump</span>
+      </div>
+      <div class="legend-group">
+        <span class="key">R</span>
+        <span class="legend-label">restart</span>
+      </div>
+      <div class="spacer"></div>
+      <button class="restart" id="restartBtn">restart</button>
+    </div>
+
+    <div class="ticker">
+      <span class="glyph">▸</span><span class="text" id="tickerText">loading objective…</span>
+    </div>
+    </div>
+
+    <div class="col-right">
     <div class="section-label"><span class="step-chip">3</span>read the verdict</div>
     <div class="verdict-panel" id="verdictPanel">
       <div class="verdict-row"><span class="who">honest agent</span><span class="outcome" id="honestOutcome">waiting to run</span></div>
@@ -555,52 +610,6 @@
     </p>
     </div>
 
-    <div class="col-viewport">
-    <div class="telemetry">
-      <div class="field"><span class="status-pill" id="statusPill">running</span></div>
-      <div class="field"><span class="label">tick</span><span class="value" id="tickVal">0</span></div>
-      <div class="field"><span class="label">held keys</span><span class="value" id="keysVal">—</span></div>
-      <div class="field"><span class="label">collected</span><span class="value" id="collectedVal">0/2</span></div>
-      <div class="spacer"></div>
-      <div class="field"><span class="label">facing</span><span class="value" id="facingVal">right</span></div>
-    </div>
-
-    <div class="viewports">
-      <div class="viewport fp-viewport">
-        <span class="tag">first-person / corridor view</span>
-        <canvas id="fpCanvas" width="720" height="440" tabindex="0" style="outline:none;"></canvas>
-        <div class="overlay-msg" id="overlay">
-          <div class="big" id="overlayBig">YOU WIN</div>
-          <div class="hint">press R, or the button below, to run it again</div>
-        </div>
-      </div>
-      <div class="viewport">
-        <span class="tag">top-down</span>
-        <canvas id="tdCanvas" width="1040" height="360"></canvas>
-      </div>
-    </div>
-
-    <div class="legend">
-      <div class="legend-group">
-        <span class="key">←</span><span class="key">→</span>
-        <span class="legend-label">move</span>
-      </div>
-      <div class="legend-group">
-        <span class="key">SPACE</span><span class="key">↑</span>
-        <span class="legend-label">jump</span>
-      </div>
-      <div class="legend-group">
-        <span class="key">R</span>
-        <span class="legend-label">restart</span>
-      </div>
-      <div class="spacer"></div>
-      <button class="restart" id="restartBtn">restart</button>
-    </div>
-
-    <div class="ticker">
-      <span class="glyph">▸</span><span class="text" id="tickerText">loading objective…</span>
-    </div>
-    </div>
    </div>
   </div>
 </div>
