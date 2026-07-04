@@ -1,11 +1,11 @@
 """
-Verifier-feedback-driven generation-policy adaptation (plan item 7 -- built
+Verifier-feedback-driven generation-policy adaptation (plan item 7, built
 last, degrades gracefully, does not touch steps 1-6). Tracks per-primitive-
 combo stats (genuine-solve-rate, adversarial-exploit-rate, validator-
 rejection-rate) across rounds and feeds them back as a weighted-sampling
 distribution over a FIXED list of named primitive combos for the next
-round's generation. Plain weighted-sampling update, not code
-self-modification -- called "generation-policy adaptation" or "verifier-
+round's generation. This is a plain weighted-sampling update, not code
+self-modification, called "generation-policy adaptation" or "verifier-
 feedback-driven generation" everywhere, never "self-improvement"/"RSI".
 """
 
@@ -16,7 +16,7 @@ import random
 from harness.generation.deterministic import generate_valid_scene
 from harness.verifier.probe import run_verifier_probe
 
-# Fixed list of named combos -- reusing exactly the combos already validated
+# Fixed list of named combos, reusing exactly the combos already validated
 # in this session, per the confirmed plan (not independent per-primitive
 # weights, which would be noisier and combinatorially unbounded).
 COMBOS: dict[str, list[str]] = {
@@ -28,14 +28,14 @@ COMBOS: dict[str, list[str]] = {
     "bare_platforming": [],
 }
 
-# Scoring weights for the next round's sampling distribution -- simple,
-# inspectable, and documented rather than tuned: mostly reward solvability,
+# Scoring weights for the next round's sampling distribution: simple,
+# inspectable, and documented rather than tuned. Mostly reward solvability,
 # moderately penalize easy adversarial exploits, lightly penalize scenes the
 # validator had to reject-and-retry on. Sums to 1.
 W_SOLVE = 0.5
 W_ROBUST = 0.3
 W_VALID = 0.2
-WEIGHT_FLOOR = 0.05  # no combo's sampling weight ever hits zero -- keeps the "infinite generation" spread
+WEIGHT_FLOOR = 0.05  # no combo's sampling weight ever hits zero; keeps the "infinite generation" spread
 
 
 def _run_one(seed: int, combo_name: str, total_max_ticks: int = 900) -> dict:
@@ -98,7 +98,7 @@ def _update_weights(weights: dict[str, float], per_combo_stats: dict) -> dict[st
     new_weights = dict(weights)
     for name, stats in per_combo_stats.items():
         if stats is None:
-            continue  # not sampled this round -- carry over the previous weight unchanged
+            continue  # not sampled this round; carry over the previous weight unchanged
         score = (
             W_SOLVE * stats["genuine_solve_rate"]
             + W_ROBUST * (1 - stats["exploit_rate"])

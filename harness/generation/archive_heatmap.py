@@ -4,20 +4,20 @@ color = occupant fitness. Static matplotlib PNG, same dark aesthetic as
 generation/adaptation_chart.py and solvers/q_learner_chart.py.
 
 Sequential palette: the dataviz skill's validated default sequential hue
-(blue, references/palette.md's 100->700 ramp) -- reversed for this dark chart
+(blue, references/palette.md's 100->700 ramp), reversed for this dark chart
 surface (#1a1a19) rather than used as documented, since the reference ramp is
 specified for a light surface where "near zero recedes toward the (light)
-surface." On a dark surface the analogous "recede" color is the *darkest*
+surface." On a dark surface the analogous "recede" color is the darkest
 step, not the lightest, so low-fitness cells map to the ramp's dark end
 (blending toward the surface) and high-fitness cells map to its light end
-(popping against it) -- a stated, reasoned adaptation, not a guessed palette.
+(popping against it), a stated, reasoned adaptation, not a guessed palette.
 Could not run the skill's node-based validator directly in this environment
 (node isn't installed, same limitation noted in adaptation_chart.py), so
 this relies on the documented reference values rather than a fresh
 validation run.
 
 Unfilled cells (never reached by the invention loop, not merely a genuine
-0.0-fitness occupant) get a distinct flat neutral -- not a very-dark blue --
+0.0-fitness occupant) get a distinct flat neutral, not a very-dark blue,
 so "coverage filling in over rounds" stays legible as a real gauge instead of
 looking identical to "filled but bad."
 """
@@ -93,7 +93,7 @@ def render_archive_heatmap_grid(archive, output_path: str):
     ax.tick_params(length=0)
 
     coverage = archive.coverage()
-    ax.set_title(f"MAP-Elites archive -- {len(archive.cells)}/{archive.total_cells} cells filled ({coverage:.0%} coverage)",
+    ax.set_title(f"MAP-Elites archive: {len(archive.cells)}/{archive.total_cells} cells filled ({coverage:.0%} coverage)",
                  color=PRIMARY_INK, fontsize=13, pad=14, loc="left")
 
     fig.tight_layout()
@@ -101,12 +101,12 @@ def render_archive_heatmap_grid(archive, output_path: str):
     plt.close(fig)
 
 
-# Categorical slot 4 (green) per references/palette.md's fixed hue order --
-# slots 1-3 (blue/aqua/yellow) are already used by generation/adaptation_chart.py's
-# trend chart. That chart plots a *different* report shape (policy_adaptation's
+# Categorical slot 4 (green) per references/palette.md's fixed hue order.
+# Slots 1-3 (blue/aqua/yellow) are already used by generation/adaptation_chart.py's
+# trend chart. That chart plots a different report shape (policy_adaptation's
 # per-combo aggregate rounds), so archive coverage gets its own single-series
 # chart here rather than being spliced in as a fourth line on an unrelated
-# dataset -- same style tokens, separate figure, since "one axis, one job"
+# dataset: same style tokens, separate figure, since "one axis, one job"
 # argues against merging two different loops' round-numbering onto one plot.
 COVERAGE_COLOR = "#008300"
 

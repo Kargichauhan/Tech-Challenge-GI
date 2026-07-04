@@ -2,7 +2,7 @@
 """
 The bigger reward-model run: tests whether the original reward model's poor
 R^2 (train_reward_model.py, one 74-frame episode) was a data-volume problem
-rather than a model-choice problem -- by changing exactly one variable at a
+rather than a model-choice problem, by changing exactly one variable at a
 time.
 
   1. Generates many solved playthroughs across many scenes (not one),
@@ -13,7 +13,7 @@ time.
      bigger dataset (isolates "did a better model help on top of that").
 
 Requires torch (CPU build: pip install --index-url
-https://download.pytorch.org/whl/cpu torch) -- an explicit, separate opt-in
+https://download.pytorch.org/whl/cpu torch), an explicit, separate opt-in
 from the guaranteed dependency-light path everywhere else in this repo.
 
 Run:  source .venv/bin/activate && python3 run_reward_model_v2.py
@@ -67,7 +67,7 @@ def main():
     print(f"  {cnn_result} ({time.time() - t0:.1f}s)")
 
     comparison = {
-        "original_single_episode_reference": "R^2 was strongly negative (~-5 to -25) on one 74-frame episode -- see README",
+        "original_single_episode_reference": "R^2 was strongly negative (~-5 to -25) on one 74-frame episode, see README",
         "n_scenes_total": len(manifest), "n_scenes_train": len(train_manifest), "n_scenes_holdout": len(holdout_manifest),
         "n_frames_train": len(train_frames), "n_frames_holdout": len(test_frames),
         "linear_on_bigger_data": linear_result,
@@ -79,24 +79,24 @@ def main():
     print(f"\nComparison written to {os.path.join(OUTPUT_DIR, 'comparison.json')}")
     b = cnn_result["rare_event_breakdown"]
     print(
-        f"\nheld-out reward_std={cnn_result['reward_std_in_test_set']} (real variance -- pickup/death/"
+        f"\nheld-out reward_std={cnn_result['reward_std_in_test_set']} (real variance: pickup/death/"
         f"success events are present in this held-out set; an earlier version of this run had a real "
         f"bug in dataset_emitter.py's tick-stride sampling that silently excluded almost all of them, "
         f"making reward_std ~0 and every downstream metric meaningless. Fixed, then regenerated.)\n\n"
         f"held-out R^2: linear (more data) = {linear_result['r2']}, CNN (more data) = {cnn_result['r2']}\n"
-        f"  linear (more data): MAE={linear_result['test_mae']} -- worse than baseline; raw-pixel linear "
+        f"  linear (more data): MAE={linear_result['test_mae']}, worse than baseline. Raw-pixel linear "
         f"regression overfits training scenes' visuals and does not generalize to new scene content.\n"
-        f"  CNN (more data):    MAE={cnn_result['test_mae']}, R^2={cnn_result['r2']} -- a real, positive "
+        f"  CNN (more data):    MAE={cnn_result['test_mae']}, R^2={cnn_result['r2']}, a real, positive "
         f"R^2 this time.\n\n"
         f"Aggregate MAE alone understates the CNN's result: {b['n_common_ticks']} of "
         f"{b['n_common_ticks'] + b['n_rare_event_ticks']} held-out frames are just the common step "
         f"penalty, which dilutes the average. Broken out by event type:\n"
         f"  common ticks:  CNN MAE={b['mae_common_ticks']}\n"
         f"  rare events (pickup/death/success, n={b['n_rare_event_ticks']}): "
-        f"CNN MAE={b['mae_rare_events']} vs mean-predictor MAE={b['mean_predictor_mae_rare_events']} "
-        f"-- roughly {round(b['mean_predictor_mae_rare_events'] / max(b['mae_rare_events'], 1e-9), 1)}x "
+        f"CNN MAE={b['mae_rare_events']} vs mean-predictor MAE={b['mean_predictor_mae_rare_events']}, "
+        f"roughly {round(b['mean_predictor_mae_rare_events'] / max(b['mae_rare_events'], 1e-9), 1)}x "
         f"better than blind guessing on exactly the events a reward model needs to get right, though "
-        f"inconsistently (some individual predictions are close, some are missed) -- reported as "
+        f"inconsistently (some individual predictions are close, some are missed). Reported as "
         f"measured, not smoothed into one flattering number."
     )
 

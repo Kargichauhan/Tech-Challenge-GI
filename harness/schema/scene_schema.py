@@ -187,7 +187,7 @@ _validator = Draft202012Validator(SCENE_SCHEMA, format_checker=FormatChecker())
 def validate_scene_structure(scene: dict) -> list[str]:
     """Structural validation only (types/required fields). Returns a list of
     human-readable error strings; empty list means structurally valid.
-    Does NOT check reachability, overlap, or id-reference integrity -- see
+    Does NOT check reachability, overlap, or id-reference integrity; see
     generation/validator.py for the semantic + physical validation pass.
     """
     return [f"{'.'.join(str(p) for p in e.path)}: {e.message}" for e in _validator.iter_errors(scene)]

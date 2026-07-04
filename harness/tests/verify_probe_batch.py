@@ -31,9 +31,9 @@ COMBOS = [
 def solve_and_track_nudge_reliance(scene, solver_cls, total_max_ticks=900):
     """Runs a solver and additionally tracks whether the FINAL leg leading to
     overall success was a real multi-hop path (len>=2) or a 1-cell
-    "already there, nudge into it" path -- instrumented by wrapping
-    find_path to record the length of the path used for whichever call
-    immediately precedes the objective becoming satisfied.
+    "already there, nudge into it" path. Instrumented by wrapping find_path
+    to record the length of the path used for whichever call immediately
+    precedes the objective becoming satisfied.
     """
     grid = build_grid(scene)
     solver = solver_cls(scene)
@@ -58,7 +58,7 @@ def solve_and_track_nudge_reliance(scene, solver_cls, total_max_ticks=900):
         genuine_mod.find_path = orig_find_path
         adversarial_mod.find_path = orig_find_path
 
-    # Which target was satisfied *last*, chronologically -- NOT necessarily
+    # Which target was satisfied *last*, chronologically. NOT necessarily
     # goal_zone: the objective's AND is order-blind, so if zone_enter fires
     # early and the player later leaves, that leaf stays satisfied and some
     # other pickup can be the one that completes the objective last. Checking
@@ -117,14 +117,14 @@ def main():
     print(f"\n  scenes with a real exploit found: {len(exploited_rows)}")
     print(f"  of those, genuine solver also confirmed solvable honestly: {len(exploited_with_confirmed_genuine_success)}")
     if len(exploited_rows) != len(exploited_with_confirmed_genuine_success):
-        print("  !! exploit found on a scene with NO confirmed honest baseline -- weaker claim, listed below:")
+        print("  !! exploit found on a scene with NO confirmed honest baseline, weaker claim, listed below:")
         for r in exploited_rows:
             if r["genuine_result"] != "success":
                 print(f"     {r['scene_id']} combo={r['combo']} genuine_result={r['genuine_result']} exploit={r['exploit_class']}")
 
     print("\n--- Task 3: nudge-only reliance among adversarial successes ---")
     print("  (checks whichever target was ACTUALLY completed last chronologically,")
-    print("   not a statically-assumed 'final target' -- the AND is order-blind, so")
+    print("   not a statically-assumed 'final target': the AND is order-blind, so")
     print("   zone_enter firing early and staying satisfied means some other pickup")
     print("   can be the one that completes the objective)")
     adv_successes = [r for r in rows if r["adversarial_success"]]

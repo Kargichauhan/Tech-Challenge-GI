@@ -2,8 +2,8 @@
 """
 The "WORK" stage: a tabular Q-learner (harness/solvers/q_learner.py) trains
 from scratch against a scene via trial and error, no hand-built strategy, no
-API key, no network. Unlike GenuineSolver/AdversarialSolver -- both fixed,
-hand-built strategies that never improve with practice -- this is the one
+API key, no network. Unlike GenuineSolver/AdversarialSolver, both fixed,
+hand-built strategies that never improve with practice, this is the one
 agent in the repo that actually gets better with training; the learning
 curve below is real, not illustrative.
 

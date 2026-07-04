@@ -6,20 +6,20 @@ dependency order the scene was built around (see schema/event_log_schema.md,
 "Why order-blind is deliberate"). It targets the three exploit classes named
 in that doc:
 
-  1. boundary_clip -- ram directly at blocking geometry (a locked door or
+  1. boundary_clip: ram directly at blocking geometry (a locked door or
      hazard), hoping the discrete per-tick step tunnels through it. Detection
      is native to the engine (segment_query in physics_engine.py), not
-     inferred here -- this solver only needs to attempt the ram.
-  2. unintended_path -- try reaching goal_zone directly under whatever keys
+     inferred here; this solver only needs to attempt the ram.
+  2. unintended_path: try reaching goal_zone directly under whatever keys
      are currently held (possibly none), ignoring whether its intended gate
      (a locked door) has been dealt with at all.
-  3. order_violation -- prefers goal_zone over prerequisite pickups whenever
+  3. order_violation: prefers goal_zone over prerequisite pickups whenever
      directly reachable right now, exposing objectives whose AND doesn't
-     check *when* each event happened, only that it happened at some point.
+     check when each event happened, only that it happened at some point.
 
-Verdict on which exploit (if any) actually landed is computed separately in
-verifier/exploit_classifier.py, from the resulting event log + boundary-clip
-log -- this module only needs to try.
+The verdict on which exploit, if any, actually landed is computed separately
+in verifier/exploit_classifier.py, from the resulting event log and
+boundary-clip log. This module only needs to try.
 """
 
 from __future__ import annotations
@@ -39,14 +39,14 @@ class AdversarialSolver:
         self.scene = scene
         self.grid = build_grid(scene)
         # Same target ids as the genuine solver (same objective, same
-        # leaves) -- deliberately NOT sorted "goal_zone last." Order is
+        # leaves), deliberately NOT sorted "goal_zone last." Order is
         # chosen dynamically in _cheapest_reachable instead.
         self.targets = _extract_targets(scene)
 
     def _cheapest_reachable(self, engine):
         """Return (target, path) for the cheapest currently-reachable unmet
         target. goal_zone is preferred outright whenever it's reachable at
-        all, even if other requirements aren't met yet -- reaching the
+        all, even if other requirements aren't met yet, since reaching the
         terminal condition before intended prerequisites is exactly the
         order/unintended-path exploit this solver exists to surface."""
         best = None
@@ -66,7 +66,7 @@ class AdversarialSolver:
     def _ram(self, engine, max_ticks):
         """No legitimate path exists to any unmet target under current
         held_keys. Blindly run toward the goal_zone's world position for a
-        batch of ticks regardless of what's blocking the way -- if the
+        batch of ticks regardless of what's blocking the way. If the
         discrete per-tick step ever tunnels through solid geometry, the
         engine's native segment_query check (physics_engine.py) logs it to
         engine.boundary_clips on its own; this just needs to attempt it."""
@@ -80,7 +80,7 @@ class AdversarialSolver:
             else:
                 action = "move_right" if target_x > px else "move_left"
                 if engine.grounded_count > 0 and ticks % 20 == 0:
-                    action = "jump"  # periodic hop, in case the block is low and jumpable-into
+                    action = "jump"  # periodic hop, in case the block is low and jumpable into
             engine.step(action)
             ticks += 1
 
@@ -93,7 +93,7 @@ class AdversarialSolver:
             if target is None:
                 stall_rounds += 1
                 if stall_rounds > MAX_STALL_ROUNDS:
-                    break  # genuinely stuck -- no path, ramming didn't open anything
+                    break  # genuinely stuck: no path, and ramming didn't open anything
                 self._ram(engine, total_max_ticks - engine.tick_count)
                 continue
             stall_rounds = 0
@@ -101,7 +101,7 @@ class AdversarialSolver:
                 # Grid says the player's current cell already overlaps the
                 # target, but the engine hasn't registered arrival yet (grid
                 # discretization is coarser than the target's real
-                # rectangle) -- nudge toward the exact world position rather
+                # rectangle). Nudge toward the exact world position rather
                 # than a no-op hop loop that never calls engine.step() (see
                 # common.nudge_toward for why that would otherwise spin
                 # forever proposing the same "already there" path).
@@ -116,7 +116,7 @@ class AdversarialSolver:
                 if engine.result is not None:
                     break
                 if not target_reached(engine, target) and player_cell(engine) != waypoint:
-                    break  # drifted -- reselect target/path next round
+                    break  # drifted: reselect target/path next round
         while engine.result is None and engine.tick_count < total_max_ticks:
             if engine.step("noop"):
                 break

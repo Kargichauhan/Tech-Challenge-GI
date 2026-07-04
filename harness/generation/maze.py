@@ -1,17 +1,17 @@
 """
-A "maze" layout -- not a new primitive type (the schema's library stays
+A "maze" layout: not a new primitive type (the schema's library stays
 exactly platform/ramp/door/key/hazard/pickup, unchanged), but a different
-*arrangement* of the existing ones: a longer, winding platform path at
+arrangement of the existing ones. It's a longer, winding platform path at
 alternating heights (forcing careful jump timing instead of a flat walk),
 several lava-hazard gaps, and a locked door gating the final stretch before
-the goal. A genuine 2D branching maze isn't honest to build here -- this
-world has one horizontal axis, no second spatial axis for real corridors to
-branch into (see harness/render/raycaster.py's docstring for the same point
-about the first-person renderer) -- so "maze" means winding and demanding to
-navigate, not a literal branching grid.
+the goal. A genuine 2D branching maze isn't honest to build here, since this
+world has one horizontal axis and no second spatial axis for real corridors
+to branch into (see harness/render/raycaster.py's docstring for the same
+point about the first-person renderer). So "maze" means winding and
+demanding to navigate, not a literal branching grid.
 
 Goes through the exact same generation/validator.validate_and_repair pipeline
-every other generated scene does -- a maze scene is checked identically to a
+every other generated scene does; a maze scene is checked identically to a
 simple one, not held to a looser bar. Hand-designed zigzag geometry can't
 guarantee reachability by construction the way the simpler generator's
 conservative spacing does, so this leans on the seed-retry loop
@@ -28,12 +28,12 @@ from harness.generation.validator import validate_and_repair
 WORLD_W, WORLD_H = 1280, 720
 GROUND_Y = 680
 
-# Winding height sequence (px above ground) -- alternates so the path
-# genuinely goes up and down, not just across. Never 0 -- a platform placed
-# exactly at ground height embeds inside the ground plate itself (a real
-# overlap), which triggers the validator's repair pass to shove the *ground
-# plane* sideways looking for clearance, destroying the whole level. Same
-# trap generation/deterministic.py's own comment already flags.
+# Winding height sequence (px above ground): alternates so the path
+# genuinely goes up and down, not just across. Never 0, since a platform
+# placed exactly at ground height embeds inside the ground plate itself (a
+# real overlap), which triggers the validator's repair pass to shove the
+# ground plane sideways looking for clearance, destroying the whole level.
+# Same trap generation/deterministic.py's own comment already flags.
 HEIGHT_PATTERN = [90, 160, 90, 130, 160, 90, 160, 120]
 
 
@@ -64,7 +64,7 @@ def generate_maze_scene(seed: int, prompt: str | None = None) -> tuple[dict | No
     key_x, _, _ = segments[1]
     objects.append({"id": "maze_key", "type": "key", "x": key_x + 20, "y": segments[1][1] - 22, "radius": 12, "key_id": key_id})
 
-    # Door gates the approach to the final platform -- placed in the gap just
+    # Door gates the approach to the final platform, placed in the gap just
     # before it (between the second-to-last and last segments), not
     # overlapping either.
     second_last_x, _, second_last_w = segments[-2]
@@ -75,7 +75,7 @@ def generate_maze_scene(seed: int, prompt: str | None = None) -> tuple[dict | No
     })
 
     # Goal sits on the last platform's own span, mirroring
-    # generation/deterministic.py's convention -- not floating past it.
+    # generation/deterministic.py's convention, not floating past it.
     goal_x = last_x + last_w - 80
     goal_y = last_y - 90
     objective = {"and": [
@@ -103,10 +103,11 @@ def generate_maze_scene(seed: int, prompt: str | None = None) -> tuple[dict | No
 
 
 def generate_valid_maze_scene(seed: int, prompt: str | None = None, max_seed_attempts: int = 40):
-    """Same seed-retry contract as generation/deterministic.generate_valid_scene --
-    hand-designed zigzag geometry can produce an occasional unreachable layout
-    (a gap/height combination that happens not to be jumpable), so this
-    retries with derived seeds rather than assuming every layout validates."""
+    """Same seed-retry contract as
+    generation/deterministic.generate_valid_scene: hand-designed zigzag
+    geometry can produce an occasional unreachable layout (a gap/height
+    combination that happens not to be jumpable), so this retries with
+    derived seeds rather than assuming every layout validates."""
     for attempt in range(max_seed_attempts):
         scene, report = generate_maze_scene(seed + attempt * 7919, prompt)
         if scene is not None:

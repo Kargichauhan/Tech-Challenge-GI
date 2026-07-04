@@ -1,5 +1,5 @@
 """Shared hop-execution machinery used by both the genuine and adversarial
-solvers -- factored out so the (hard-won, physics-precision-sensitive) hop
+solvers, factored out so the (hard-won, physics-precision-sensitive) hop
 controller logic isn't duplicated and can't drift between the two."""
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ def target_world_x(scene, target: str) -> float:
 def nudge_toward(engine, target_x: float, max_ticks: int):
     """find_path can return a 1-cell "path" (the player's current grid cell
     already overlaps the target) when the coarse grid is a cell or so
-    coarser than the target's actual world rectangle -- the real engine
+    coarser than the target's actual world rectangle. The real engine
     hasn't registered arrival yet even though there's no further hop to
     execute. Without this, the caller's `for i in range(1, len(path))` hop
     loop is a no-op (range(1,1) is empty): zero engine.step() calls happen,
@@ -53,7 +53,7 @@ def do_one_hop(engine, waypoint, from_cell, edge_type, max_ticks):
     max_ticks or until horizontally arrived. Returns ticks used.
 
     `edge_type` comes straight from find_path, not inferred from the row
-    delta between from_cell and waypoint -- a flat jump across a gap between
+    delta between from_cell and waypoint. A flat jump across a gap between
     two same-height platforms has zero row delta, so row-based inference
     would misclassify it as a plain walk and never press jump.
     """
@@ -71,7 +71,7 @@ def do_one_hop(engine, waypoint, from_cell, edge_type, max_ticks):
         px, py = engine.player_body.position
         dx = target_x - px
         # A "fall" edge (generation/pathfinding._fall_target) assumes a
-        # straight vertical drop from the takeoff column -- but real falling
+        # straight vertical drop from the takeoff column, but real falling
         # continues drifting horizontally at full speed, same as a jump, so
         # continuing to move once airborne would land well past the column
         # the grid model checked for hazards/edges. Stop horizontal drift the
@@ -87,7 +87,7 @@ def do_one_hop(engine, waypoint, from_cell, edge_type, max_ticks):
             continue
         if needs_jump and not jumped:
             # _simulate_jump (generation/pathfinding.py) assumes takeoff from
-            # the exact center of from_cell -- jumping from wherever the
+            # the exact center of from_cell. Jumping from wherever the
             # player happens to be within "close enough" of the *previous*
             # waypoint would shift the whole arc by that offset, which is
             # exactly the kind of few-pixel error that turns a validated

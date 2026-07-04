@@ -1,38 +1,39 @@
 """
 Explore -> play -> work -> exploit orchestration. This is the package this
-submission calls the "open-ended invention loop" -- everything elsewhere in
+submission calls the "open-ended invention loop". Everything elsewhere in
 the repo (generation/policy_adaptation.py in particular) keeps its existing,
 accurate, simpler description; see README's Naming section for the explicit
 scoping.
 
-  explore  -- explore_propose: pick a parent from the archive, mutate it
-              (mutation.py; optionally revised by an LLM first, see
-              `reviser` below), screen for novelty before spending a full
-              verifier probe on it (novelty.py).
-  work     -- evaluate_candidate: run the *existing* verifier/probe.py
-              (genuine + adversarial solve, unchanged) and score the result
-              (regret.py) -- this is also where solvers/q_learner.py's
-              actual trained-from-scratch agent belongs, as a richer
-              "agent_ticks" input to compute_regret, for scenes worth the
-              extra training cost.
-  play     -- play_select_target: choose which archive cell most needs
-              attention. Deliberately separate from the archive's own
-              fitness-based occupancy (below): a candidate can win a cell on
-              fitness alone without being trustworthy to build further
-              mutations on top of (see regret.is_frontier_worthy). This
-              function prefers an occupant flagged frontier_worthy over an
-              arbitrary one, falling back to the sparsest-cell heuristic
-              only when none exists yet.
-  exploit  -- the archive itself (archive.py): each cell keeps its best
-              occupant, a standing library of "genuinely varied, verified"
-              environments this loop invented rather than sampled from a
-              fixed list.
+  explore: explore_propose picks a parent from the archive and mutates it
+           (mutation.py; optionally revised by an LLM first, see `reviser`
+           below), then screens for novelty before spending a full verifier
+           probe on it (novelty.py).
+  work:    evaluate_candidate runs the existing verifier/probe.py (genuine
+           and adversarial solve, unchanged) and scores the result
+           (regret.py). This is also where solvers/q_learner.py's actual
+           trained-from-scratch agent belongs, as a richer "agent_ticks"
+           input to compute_regret, for scenes worth the extra training
+           cost.
+  play:    play_select_target chooses which archive cell most needs
+           attention. This is deliberately separate from the archive's own
+           fitness-based occupancy below, because a candidate can win a cell
+           on fitness alone without being trustworthy to build further
+           mutations on top of (see regret.is_frontier_worthy). The
+           function prefers an occupant flagged frontier_worthy over an
+           arbitrary one, falling back to the sparsest-cell heuristic only
+           when none exists yet.
+  exploit: the archive itself (archive.py). Each cell keeps its best
+           occupant, a standing library of genuinely varied, verified
+           environments this loop invented rather than sampled from a
+           fixed list.
 
 `reviser(parent, rng) -> (scene_or_None, move_name)` is an optional callable
-(harness/claude_agent/scene_reviser.py provides one) -- when it returns None
-(no API key, or every attempt failed), explore_propose falls back to
-mutation.propose_mutant_with_retry so the loop always completes without a
-key, exactly like run_claude_demo.py's relationship to run_demo.py.
+(harness/claude_agent/scene_reviser.py provides one). When it returns None,
+because there's no API key or every attempt failed, explore_propose falls
+back to mutation.propose_mutant_with_retry, so the loop always completes
+without a key, exactly like run_claude_demo.py's relationship to
+run_demo.py.
 """
 
 from __future__ import annotations
@@ -59,16 +60,16 @@ def _metadata(scene: dict, probe: dict, regret: float | None, severity: float) -
         "regret": regret,
         "honest_baseline_confirmed": probe["honest_baseline_confirmed"],
         # Diversity (archive.insert, unconditional) and curriculum-worthiness
-        # (this flag) are deliberately separate decisions -- see
-        # regret.is_frontier_worthy's docstring. A cell's occupant can win on
-        # fitness alone without being frontier_worthy; play_select_target
+        # (this flag) are deliberately separate decisions. See
+        # regret.is_frontier_worthy's docstring: a cell's occupant can win on
+        # fitness alone without being frontier_worthy. play_select_target
         # below is what actually reads this flag.
         "frontier_worthy": is_frontier_worthy(regret, severity),
     }
 
 
 def _seed_archive(archive: MapElitesArchive, total_max_ticks: int) -> list[dict]:
-    """Warm-start from policy_adaptation.COMBOS -- the existing, simpler
+    """Warm-starts from policy_adaptation.COMBOS: the existing, simpler
     mechanism's fixed named combos become round-0 occupants, not a
     from-scratch cold start."""
     seed_log = []
@@ -93,17 +94,17 @@ def _seed_archive(archive: MapElitesArchive, total_max_ticks: int) -> list[dict]
 def play_select_target(archive: MapElitesArchive, rng: random.Random) -> dict | None:
     """Picks a scene to use as the mutation/revision parent.
 
-    Two separate concerns, not one: diversity (which cells the archive has
-    filled at all) already happened unconditionally in evaluate_candidate's
+    Two separate concerns, not one. Diversity, which cells the archive has
+    filled at all, already happened unconditionally in evaluate_candidate's
     archive.insert call, regardless of any one occupant's difficulty. This
-    function is the *curriculum* half -- given what's already archived,
-    which occupant is worth building on next. It prefers a `frontier_worthy`
+    function is the curriculum half: given what's already archived, which
+    occupant is worth building on next. It prefers a `frontier_worthy`
     occupant (regret.is_frontier_worthy's flag, stored per-cell in metadata)
-    over an arbitrary one: a cell that merely won on fitness could still be
-    trivial, exploited, or broken in a way fitness alone didn't catch, and
-    building further mutations on top of a bad parent compounds the problem.
-    Falls back to the sparsest-cell heuristic (grow archive coverage) only
-    when no frontier-worthy occupant exists yet."""
+    over an arbitrary one, because a cell that merely won on fitness could
+    still be trivial, exploited, or broken in a way fitness alone didn't
+    catch, and building further mutations on top of a bad parent compounds
+    the problem. It falls back to the sparsest-cell heuristic (grow archive
+    coverage) only when no frontier-worthy occupant exists yet."""
     if not archive.cells:
         return None
     frontier_worthy = [c for c in archive.cells.values() if c["metadata"].get("frontier_worthy")]
@@ -123,9 +124,9 @@ def explore_propose(archive: MapElitesArchive, rng: random.Random, reviser=None)
         candidate, move = reviser(parent, rng)
         if candidate is not None:
             return candidate, move
-        # reviser unavailable or failed all attempts -- fall through to the
-        # deterministic mutation fallback, same graceful-degradation pattern
-        # run_claude_demo.py uses relative to run_demo.py.
+        # reviser unavailable or failed all attempts: fall through to the
+        # deterministic mutation fallback, the same graceful-degradation
+        # pattern run_claude_demo.py uses relative to run_demo.py.
     candidate, move, _attempts = propose_mutant_with_retry(parent, rng)
     return candidate, move
 
@@ -142,11 +143,11 @@ def evaluate_candidate(scene: dict, total_max_ticks: int):
 def run_invention_round(archive: MapElitesArchive, rng: random.Random, total_max_ticks: int,
                          batch_size: int, reviser=None, on_candidate=None, on_candidate_done=None) -> list[dict]:
     """`on_candidate(i, batch_size)` is called before each candidate is
-    proposed, `on_candidate_done(i, batch_size, entry)` right after its
-    outcome is known -- purely for progress feedback (e.g. printing
-    "candidate 3/5" then "-> accepted"/"-> rejected"), since a `--claude` run
-    makes a real, blocking network call per candidate and can otherwise sit
-    silent for a while with no way to tell "still working" from "done"."""
+    proposed, and `on_candidate_done(i, batch_size, entry)` right after its
+    outcome is known. These exist purely for progress feedback (printing
+    "candidate 3/5" then "accepted"/"rejected"), since a `--claude` run makes
+    a real, blocking network call per candidate and can otherwise sit silent
+    for a while with no way to tell "still working" from "done"."""
     round_log = []
     for i in range(batch_size):
         if on_candidate is not None:
@@ -165,7 +166,7 @@ def run_invention_round(archive: MapElitesArchive, rng: random.Random, total_max
                 "fitness": round(fitness, 4), "regret": round(regret, 4) if regret is not None else None,
                 "exploit_class": probe["exploit_class"], "honest_baseline_confirmed": probe["honest_baseline_confirmed"],
                 # Diversity (accepted, above) and curriculum-worthiness (this
-                # flag) are separate outcomes -- a candidate can be archived
+                # flag) are separate outcomes. A candidate can be archived
                 # for diversity without ever being flagged as worth building
                 # on further; see regret.is_frontier_worthy.
                 "frontier_worthy": metadata["frontier_worthy"],
@@ -180,11 +181,11 @@ def run_invention_loop(num_rounds: int = 5, batch_size: int = 8, seed: int = 0,
                         total_max_ticks: int = DEFAULT_TOTAL_MAX_TICKS,
                         path_length_bins: int = 5, interaction_bins: int = 5, reviser=None,
                         on_round_start=None, on_candidate=None, on_candidate_done=None):
-    """Returns (archive, rounds) -- rounds[0] is the warm-start seeding pass,
-    rounds[1:] are explore/evaluate/insert rounds. `on_round_start(round_label)`,
-    `on_candidate(i, batch_size)`, and `on_candidate_done(i, batch_size, entry)`
-    are optional progress callbacks (see run_invention_round's docstring) --
-    all no-ops by default."""
+    """Returns (archive, rounds), where rounds[0] is the warm-start seeding
+    pass and rounds[1:] are explore/evaluate/insert rounds.
+    `on_round_start(round_label)`, `on_candidate(i, batch_size)`, and
+    `on_candidate_done(i, batch_size, entry)` are optional progress callbacks
+    (see run_invention_round's docstring), all no-ops by default."""
     rng = random.Random(seed)
     archive = MapElitesArchive(path_length_bins, interaction_bins)
     if on_round_start is not None:

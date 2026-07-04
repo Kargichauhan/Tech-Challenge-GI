@@ -1,41 +1,43 @@
 """
-Tabular Q-learner: a genuinely *trained* agent, in contrast to genuine.py/
-adversarial.py, which are both hand-built (they always play a fixed strategy,
-never improve with practice). This is the "WORK" stage's actual mastery-via-
-learning demonstration, and the honest place a learning curve belongs -- the
-two hand-built solvers have no notion of getting better with more attempts.
+Tabular Q-learner: a genuinely trained agent, in contrast to genuine.py and
+adversarial.py, which are both hand-built and always play a fixed strategy,
+never improving with practice. This is the "WORK" stage's actual mastery-
+via-learning demonstration, and the honest place a learning curve belongs,
+since the two hand-built solvers have no notion of getting better with more
+attempts.
 
-State = (cell, frozenset(collected_ids)) over the *same* coarse grid
-`generation/pathfinding.py` already builds -- not raw per-tick pymunk state,
+State is (cell, frozenset(collected_ids)) over the same coarse grid
+`generation/pathfinding.py` already builds, not raw per-tick pymunk state,
 which would make tabular learning intractable (too many states to ever
-revisit). Actions = (move_left, move_right, jump_left, jump_right), and every
-transition reuses pathfinding.py's own primitives (_is_standing, _fall_target,
-_simulate_jump, _line_clear) rather than a second physics approximation, so
-the learned policy is playing by the exact rules the deterministic solvers
-already trust. `held_keys` (needed for door passability) is derived from
-`collected_ids` via each key object's `key_id` field, exactly like the real
-engine derives it (engine/physics_engine.py's key_begin handler).
+revisit). Actions are (move_left, move_right, jump_left, jump_right), and
+every transition reuses pathfinding.py's own primitives (_is_standing,
+_fall_target, _simulate_jump, _line_clear) rather than a second physics
+approximation, so the learned policy is playing by the exact rules the
+deterministic solvers already trust. `held_keys`, needed for door
+passability, is derived from `collected_ids` via each key object's `key_id`
+field, exactly like the real engine derives it (engine/physics_engine.py's
+key_begin handler).
 
 Two deliberate scoping simplifications, stated plainly rather than silently
 assumed:
-  1. `_simulate_jump` returns None both when an arc grazes solid geometry
-     (survivable in the real engine -- you bonk and fall back) and when it
-     grazes lethal geometry (fatal in the real engine) -- it doesn't
-     distinguish the two. Rather than reimplement arc-tracing to tell them
-     apart, a failed jump here is conservatively treated as a wasted move
-     (small penalty, stay put), not death. The trained policy is executed
-     for real afterward via solvers/common.do_one_hop, where the real
-     engine's own hazard detection is authoritative regardless of what this
-     training environment assumed -- so this simplification can only ever
-     make training slightly less risk-averse than it should be, never change
+  1. `_simulate_jump` returns None both when an arc grazes solid geometry,
+     which is survivable in the real engine (you bonk and fall back), and
+     when it grazes lethal geometry, which is fatal. It doesn't distinguish
+     the two. Rather than reimplement arc-tracing to tell them apart, a
+     failed jump here is conservatively treated as a wasted move (small
+     penalty, stay put), not death. The trained policy is executed for real
+     afterward via solvers/common.do_one_hop, where the real engine's own
+     hazard detection is authoritative regardless of what this training
+     environment assumed, so this simplification can only ever make
+     training slightly less risk-averse than it should be, never change
      what actually happens once a real playthrough runs.
-  2. Unlike GenuineSolver (which extracts an intended target order --
-     "keys before doors before goal" -- from the objective and beelines to
-     each), this environment has no notion of "targets" at all. Reward comes
-     from re-evaluating the *whole* objective predicate
+  2. Unlike GenuineSolver, which extracts an intended target order (keys
+     before doors before goal) from the objective and beelines to each,
+     this environment has no notion of "targets" at all. Reward comes from
+     re-evaluating the whole objective predicate
      (schema/objective_eval.evaluate) against a synthesized event log after
      every step. The agent has to discover the dependency order itself
-     through trial and error -- a real qualitative difference from the other
+     through trial and error, a real qualitative difference from the other
      two solvers, not just a reimplementation of the same idea.
 """
 
@@ -66,7 +68,7 @@ SUCCESS_REWARD = 1.0
 PICKUP_SHAPING_REWARD = 0.1
 
 PER_HOP_MAX_TICKS = 240
-MAX_ROLLOUT_STEPS = 300  # bound on the greedy grid-rollout used to convert Q into a real playthrough
+MAX_ROLLOUT_STEPS = 300  # bound on the greedy grid rollout used to convert Q into a real playthrough
 
 
 def _solid_now(grid: GridWorld, held_keys: frozenset) -> set:
@@ -94,9 +96,9 @@ class GridQEnv:
 
     def _collect_at(self, cell, collected, solid_now):
         """Direct standing-cell pickups plus the same 'jump straight up and
-        grab it mid-air' logic reachability_closure/find_path use -- a
+        grab it mid-air' logic reachability_closure/find_path use: a
         collectible doesn't need to be a landing spot. Returns
-        (new_ids, grab_waypoint_or_None) -- grab_waypoint is set when the
+        (new_ids, grab_waypoint_or_None), where grab_waypoint is set when the
         collectible was reached via the vertical-hop case specifically (not
         the same cell), so a real playthrough knows it needs an explicit
         "grab" hop there (do_one_hop's edge_type="grab"), matching exactly
@@ -142,13 +144,13 @@ class GridQEnv:
                 if fall_to is None:
                     return (cell, collected), DEATH_REWARD, True
                 next_cell = fall_to
-            # else: blocked by solid or lethal geometry -- stay in place
+            # else: blocked by solid or lethal geometry, stay in place
         else:
             direction = -1 if action == "jump_left" else 1
             landing = _simulate_jump(self.grid, cell, direction, solid_now, held)
             if landing is not None:
                 next_cell = landing
-            # else: failed jump -- stay in place (see module docstring)
+            # else: failed jump, stay in place (see module docstring)
 
         reward = STEP_PENALTY
         new_ids, _grab_waypoint = self._collect_at(next_cell, collected, solid_now)
@@ -191,8 +193,8 @@ class QLearnerAgent:
               max_steps: int = 200, epsilon_start: float = 1.0, epsilon_end: float = 0.05,
               seed: int = 0) -> list[float]:
         """Standard tabular Q-learning (epsilon-greedy behavior, epsilon
-        decaying over training). Returns the per-episode total reward -- the
-        learning curve."""
+        decaying over training). Returns the per-episode total reward,
+        which is the learning curve."""
         rng = random.Random(seed)
         returns = []
         for ep in range(episodes):
@@ -229,7 +231,7 @@ class QLearnerAgent:
             action = self._greedy_action((cell, collected))
             (next_cell, next_collected), _reward, done = self.env.step((cell, collected), action)
             if next_cell == cell and next_collected == collected:
-                break  # policy is stuck (e.g. converged to a wasted move) -- stop rather than loop forever
+                break  # policy is stuck (e.g. converged to a wasted move); stop rather than loop forever
 
             held = self.env.held_keys(collected)
             solid_now = _solid_now(self.env.grid, held)

@@ -24,7 +24,7 @@ from harness.render.gif_builder import build_gif
 
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "runs", "demo")
 
-# A fixed, hand-picked spread across the primitive library -- deterministic
+# A fixed, hand-picked spread across the primitive library: deterministic
 # (same seed -> same scene every time), no network/API dependency.
 DEMO_SCENES = [
     (16, ["ramp", "door", "key", "hazard", "pickup"], "a full obstacle course with a ramp, a locked door, a hazard, and a pickup"),
@@ -34,10 +34,10 @@ DEMO_SCENES = [
     (4, ["key", "door", "hazard"], "a key-and-door puzzle with a hazard along the route"),
     (5, [], "a bare platforming level with no extra primitives"),
     # The challenge brief's own example phrasing ("picked up the can from the
-    # table") -- built from the existing pickup+platform primitives, no new
+    # table"), built from the existing pickup+platform primitives, no new
     # schema needed. `pickup` stands in for "the can," `platform` for "the
     # table" it's resting on.
-    (7, ["pickup"], "a table with a can on it -- pick up the can"),
+    (7, ["pickup"], "a table with a can on it, pick up the can"),
 ]
 
 

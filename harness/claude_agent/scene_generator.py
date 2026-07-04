@@ -1,16 +1,17 @@
 """
-Text command -> scene, via the live Claude API. This is the "upgrade layer"
-(plan item 9) on top of the deterministic generator -- same schema, same
-validator, just a different source of scene specs.
+Text command becomes a scene, via the live Claude API. This is the "upgrade
+layer" (plan item 9) on top of the deterministic generator: same schema,
+same validator, just a different source of scene specs.
 
 Uses regular (non-strict) tool use, not `output_config.format` structured
-outputs: the objective predicate is a recursive schema (event/and/or/not,
-self-referential via $ref), and structured outputs explicitly do not support
-recursive schemas. Regular tool-call input_schema has no such restriction.
-Since regular tool use doesn't *guarantee* schema conformance the way strict
-structured outputs would, every response still goes through the same
-validate_and_repair pipeline the deterministic generator uses, with a bounded
-retry loop that feeds validation errors back to Claude as a tool_result error.
+outputs, because the objective predicate is a recursive schema (event/and/
+or/not, self-referential via $ref), and structured outputs explicitly do
+not support recursive schemas. Regular tool-call input_schema has no such
+restriction. Since regular tool use doesn't guarantee schema conformance
+the way strict structured outputs would, every response still goes through
+the same validate_and_repair pipeline the deterministic generator uses,
+with a bounded retry loop that feeds validation errors back to Claude as a
+tool_result error.
 """
 
 from __future__ import annotations
@@ -25,7 +26,7 @@ from harness.schema.scene_schema import SCENE_SCHEMA
 MODEL = "claude-opus-4-8"
 MAX_ATTEMPTS = 4
 
-# Tool input_schema mirrors the scene schema exactly -- this is the actual
+# Tool input_schema mirrors the scene schema exactly. This is the actual
 # contract Claude fills, checked afterward by the same validator the
 # deterministic generator uses (schema/scene_schema.py + generation/validator.py).
 SCENE_TOOL = {
@@ -100,7 +101,7 @@ def generate_scene_via_claude(prompt: str, client: anthropic.Anthropic | None = 
         if isinstance(scene.get("objective"), str):
             # Observed live: Claude sometimes returns the one recursive part
             # of the schema (objective, via $ref) as a JSON-encoded string
-            # instead of a nested object -- a known tool-call quirk with
+            # instead of a nested object, a known tool-call quirk with
             # deeply-nested/recursive schemas. It did this consistently
             # across retries in testing, so don't rely on re-prompting to
             # fix it; parse it defensively instead. Leave malformed JSON

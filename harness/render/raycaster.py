@@ -1,35 +1,35 @@
 """
-Corridor-perspective first-person renderer -- a deliberately scoped-down
+Corridor-perspective first-person renderer: a deliberately scoped-down
 stand-in for a Wolfenstein-style raycaster, and the honest bridge toward the
 challenge's stated vision-policy action space (move forward/back/left/right
 + mouse look), not a claim of a full 3D game.
 
-Why not a real raycaster: that technique casts a fan of rays across a
-horizontal field of view into a 2D top-down MAP OF WALLS, and reads depth off
-where each ray first hits a wall -- it needs a genuine second spatial axis
+Why not a real raycaster. That technique casts a fan of rays across a
+horizontal field of view into a 2D top-down map of walls, and reads depth
+off where each ray first hits a wall. It needs a genuine second spatial axis
 (left/right) with real geometry in it. This world doesn't have one: it's a
 side-scrolling platformer, one horizontal axis (x) plus gravity (y). Casting
-a fan of rays here would have every ray in the fan hit the exact same point
-(there is nothing to either side), so a literal port of the algorithm would
-be motion with no information behind it.
+a fan of rays here would have every ray in the fan hit the exact same point,
+since there is nothing to either side, so a literal port of the algorithm
+would be motion with no information behind it.
 
 What's built instead: a single forward-looking view along the player's
 current heading (+x or -x). Objects at different x-distances genuinely come
-into and out of view as the player advances -- real depth, just earned
-through *time* (approaching an object) rather than through a *second spatial
-axis* at a single instant. Each object is perspective-scaled (nearer =
-larger) and vertically positioned by its actual world y relative to the
+into and out of view as the player advances. The depth is real, but it's
+earned through time (approaching an object) rather than through a second
+spatial axis at a single instant. Each object is perspective-scaled (nearer
+is larger) and vertically positioned by its actual world y relative to the
 player's eye line, so a platform that's genuinely higher up still reads as
 higher up. This is closer to an on-rails corridor-runner view than a maze
 FPS, and is presented as exactly that.
 
 Cosmetic 2.5D dressing (side wall panels, a receding floor grid, a drifting
-parallax backdrop) is layered on top purely as framing -- explicitly
+parallax backdrop) is layered on top purely as framing: explicitly
 decorative, not derived from or claiming to represent any real geometry
 (there are no actual side walls in this world). It's drawn first, and every
 real feature (platforms, hazards, doors, the goal zone) is drawn on top of
-it, so what's real vs. decoration is a strict, visible layering order, not
-something a viewer has to guess at.
+it, so what's real versus decoration is a strict, visible layering order,
+not something a viewer has to guess at.
 """
 
 from __future__ import annotations
@@ -56,7 +56,7 @@ SKY_BOTTOM = (28, 30, 40)
 GROUND_NEAR = (46, 42, 34)
 GROUND_FAR = (24, 24, 28)
 
-# Cosmetic-dressing constants -- pure framing, not derived from real geometry.
+# Cosmetic-dressing constants: pure framing, not derived from real geometry.
 OPENING_WIDTH_FRAC = 0.42   # width of the "tunnel opening" at the horizon, as a fraction of frame width
 OPENING_HEIGHT_FRAC = 0.5   # height of that opening band around the horizon line
 WALL_COLOR_NEAR = (58, 56, 64)
@@ -138,7 +138,7 @@ def _visible_features(scene: dict, engine, heading: str) -> list[dict]:
 
 
 def _draw_parallax_backdrop(surf, w: int, horizon_y: int, player_x: float):
-    """A drifting silhouette in the sky band -- purely decorative background
+    """A drifting silhouette in the sky band, purely decorative background
     parallax, not tied to any real object. Drift is slow (a fraction of the
     player's actual world position) so it reads as "distant," not as a real
     tracked feature."""
@@ -155,7 +155,7 @@ def _draw_parallax_backdrop(surf, w: int, horizon_y: int, player_x: float):
 
 def _draw_corridor_walls(surf, w: int, h: int, horizon_y: int):
     """Two flat-shaded side-wall trapezoids framing a central 'opening' at
-    the horizon, plus a few perspective seam lines -- the classic corridor-
+    the horizon, plus a few perspective seam lines: the classic corridor-
     game depth trick. No real walls exist in this world; this only ever
     frames the same real content, never substitutes for it."""
     opening_w = w * OPENING_WIDTH_FRAC
@@ -183,7 +183,7 @@ def _draw_corridor_walls(surf, w: int, h: int, horizon_y: int):
 
 
 def _draw_floor_grid(surf, w: int, h: int, horizon_y: int):
-    """Receding tile lines on the floor band, denser near the horizon --
+    """Receding tile lines on the floor band, denser near the horizon: a
     decorative perspective cue layered on the real floor gradient, not a
     claim about world geometry."""
     floor_h = h - horizon_y

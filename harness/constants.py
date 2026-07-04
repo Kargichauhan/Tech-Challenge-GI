@@ -1,6 +1,6 @@
 """Single source of truth for player movement physics constants, shared by
 the real engine (engine/physics_engine.py) and the coarse grid model
-(generation/pathfinding.py). These two must use identical numbers -- the
+(generation/pathfinding.py). These two must use identical numbers, since the
 grid model simulates the same parabolic jump arc the real engine executes,
 so any drift between them reintroduces the "grid approves a jump the real
 physics can't make" class of bug this file exists to prevent.

@@ -61,7 +61,7 @@ def _draw_text(surf, text, pos, size=18, color=None, center=False):
 
 def render_scene_frame(scene: dict, engine=None, caption: str | None = None) -> pygame.Surface:
     """One frame: the static scene geometry, plus (if `engine` given) live
-    state -- player position, which doors are open, which keys/pickups are
+    state: player position, which doors are open, which keys/pickups are
     already collected, whether the player is inside goal_zone."""
     w, h = scene["world"]["width"], scene["world"]["height"]
     surf = pygame.Surface((w, h))

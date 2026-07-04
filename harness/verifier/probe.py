@@ -27,7 +27,7 @@ def run_verifier_probe(scene: dict, total_max_ticks: int = 60 * 25) -> dict:
         "genuine_ticks": genuine_ticks,
         # Whether the genuine solver confirmed this scene is honestly
         # solvable at all. An exploit found alongside genuine_result !=
-        # "success" is a weaker claim -- there's no confirmed honest
+        # "success" is a weaker claim: there's no confirmed honest
         # baseline the adversary shortcut past, only that it reached success
         # via a route that skipped the intended order. Downstream reporting
         # (GIF captions, aggregate stats) should distinguish the two rather

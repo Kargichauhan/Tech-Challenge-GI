@@ -1,16 +1,16 @@
 """
-Deterministic (no-LLM) scene mutation -- the ACCEL-style fallback the
+Deterministic (no-LLM) scene mutation: the ACCEL-style fallback the
 invention loop (loop.py) always has available, independent of whether an API
-key is configured. Each move takes a parent scene and returns a *new* scene
+key is configured. Each move takes a parent scene and returns a new scene
 dict, or None if the move doesn't apply to this parent (e.g. remove_object on
 a scene with nothing removable). `propose_mutant` applies one move;
 `propose_mutant_with_retry` re-tries with a different move (bounded ladder)
 if the result doesn't survive the existing generation/validator's
-`validate_and_repair` -- mutated scenes are held to the exact same bar as
+`validate_and_repair`. Mutated scenes are held to the exact same bar as
 freshly generated ones, never a relaxed one.
 
 Mutated scenes keep the parent's metadata["generator"] value unchanged
-rather than inventing a third provenance category -- scene_schema.py's enum
+rather than inventing a third provenance category. scene_schema.py's enum
 (["freeform_llm", "deterministic_template"]) is intentionally left untouched
 by this pivot; a mutation is a post-processing step on top of however the
 parent was produced, not a new kind of authorship.
@@ -20,13 +20,14 @@ Move registry, roughly grouped:
     resize_hazard
   - dependency-structure moves: add_key_door_dependency,
     remove_key_door_dependency
-  - objective-structure moves: wrap_objective_or, add_avoid_clause -- the
-    actual new capability here: policy_adaptation.py's COMBOS only ever vary
-    *which primitives appear*, never the objective predicate's shape. These
-    two touch the and/or/not tree itself.
-  - swap_combo: a "macro" mutation -- regenerate wholesale from a different
-    named combo on a fresh seed, for diversity injection when local mutation
-    is stuck in a rut (ACCEL/PLR-style restart, not a fine-grained edit).
+  - objective-structure moves: wrap_objective_or, add_avoid_clause. This is
+    the actual new capability here: policy_adaptation.py's COMBOS only ever
+    vary which primitives appear, never the objective predicate's shape.
+    These two touch the and/or/not tree itself.
+  - swap_combo: a "macro" mutation that regenerates wholesale from a
+    different named combo on a fresh seed, for diversity injection when
+    local mutation is stuck in a rut (ACCEL/PLR-style restart, not a
+    fine-grained edit).
 """
 
 from __future__ import annotations
@@ -48,7 +49,7 @@ def _fresh_id(rng: random.Random, prefix: str) -> str:
 def _strip_objective_leaf(objective: dict, event: str, ref_id: str):
     """Remove any leaf matching (event, ref_id) from an and/or/not tree,
     folding now-empty and/or nodes away. Used when a mutation removes the
-    object a leaf referenced -- a dangling reference is an outright rejection
+    object a leaf referenced: a dangling reference is an outright rejection
     in validate_and_repair (check_referential_integrity), not something it
     can repair, so the mutation itself has to keep the objective consistent.
     """
@@ -177,16 +178,17 @@ def move_swap_combo(scene: dict, rng: random.Random) -> dict | None:
 
 def move_wrap_objective_or(scene: dict, rng: random.Random) -> dict | None:
     """Adds an alternate, simpler win condition alongside the existing full
-    requirement -- always reachability-valid (zone_enter is already a base
-    requirement of every parent scene), and a genuinely new *shape* of
-    objective policy_adaptation.py's fixed-combo sampling never produces."""
+    requirement. Always reachability-valid, since zone_enter is already a
+    base requirement of every parent scene, and a genuinely new shape of
+    objective that policy_adaptation.py's fixed-combo sampling never
+    produces."""
     scene = copy.deepcopy(scene)
     scene["objective"] = {"or": [scene["objective"], {"event": "zone_enter", "id": "goal_zone"}]}
     return scene
 
 
 def move_add_avoid_clause(scene: dict, rng: random.Random) -> dict | None:
-    """'Solve without ever touching this hazard, even non-lethally' -- a
+    """'Solve without ever touching this hazard, even non-lethally': a
     negated leaf, schema-legal and validator-tolerant (negated leaves are
     skipped from reachability checking, see validator._extract_positive_leaves),
     that a fixed-combo sampler could never express."""
@@ -215,7 +217,7 @@ MOVES = {
 
 def propose_mutant(parent: dict, rng: random.Random, move: str | None = None):
     """Applies exactly one move (random if unspecified). Returns
-    (scene_or_None, move_name) -- unvalidated; caller is responsible for
+    (scene_or_None, move_name), unvalidated; caller is responsible for
     running it through validate_and_repair."""
     move = move or rng.choice(list(MOVES.keys()))
     candidate = MOVES[move](parent, rng)

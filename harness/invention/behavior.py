@@ -3,7 +3,7 @@ Behavior-space keying for the MAP-Elites archive (archive.py).
 
 A true 4D grid (path-length x interaction-count x rule-shape x
 irreversibility) would be almost empty at the batch sizes this loop actually
-runs (a handful of rounds x a handful of candidates each) -- most cells would
+runs (a handful of rounds x a handful of candidates each). Most cells would
 sit at zero forever, and "coverage" would be a meaningless number. Scoping
 decision, stated here rather than silently under-delivered: a **2D primary
 grid** (path-length bin x interaction bin) is the archive's actual indexing
@@ -58,7 +58,7 @@ def rule_shape_signature(scene: dict) -> dict:
 
 
 def irreversibility_count(scene: dict) -> int:
-    """Count of locked doors -- each is a one-way gate: once its key is
+    """Count of locked doors. Each is a one-way gate: once its key is
     collected and it opens, the level's traversable topology has permanently
     changed. A rough, cheap proxy, not a full reachability-graph analysis."""
     return sum(1 for o in scene["objects"] if o["type"] == "door" and o["locked"])

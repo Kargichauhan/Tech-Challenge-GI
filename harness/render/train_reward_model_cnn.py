@@ -4,7 +4,7 @@ model predict the event-log-derived reward from first-person pixels alone?),
 but with two changes tested independently so the result is honestly
 attributable:
 
-  1. More data -- many playthroughs across many scenes (multi_scene_dataset.py)
+  1. More data: many playthroughs across many scenes (multi_scene_dataset.py)
      instead of one 74-frame episode, held out **by scene** for a genuine
      generalization test.
   2. A real CNN (torch) instead of linear regression, trained on the same
@@ -13,7 +13,7 @@ attributable:
      number.
 
 This module is intentionally separate from train_reward_model.py, which
-stays torch-free and remains the dependency-light default -- importing this
+stays torch-free and remains the dependency-light default. Importing this
 module requires torch, an explicit opt-in (see run_reward_model_v2.py).
 """
 
@@ -27,8 +27,8 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from harness.render.train_reward_model import DOWNSAMPLE, _downsample
 
-CNN_INPUT_SIZE = (48, 64)  # (rows, cols) -- larger than the linear model's downsample; a CNN can use more pixels
-STEP_REWARD_REF = -0.01  # dataset_emitter.STEP_REWARD -- duplicated to avoid importing the physics engine for one constant
+CNN_INPUT_SIZE = (48, 64)  # (rows, cols); larger than the linear model's downsample, since a CNN can use more pixels
+STEP_REWARD_REF = -0.01  # dataset_emitter.STEP_REWARD, duplicated to avoid importing the physics engine for one constant
 
 
 def _downsample_batch(frames: np.ndarray, size) -> np.ndarray:
@@ -37,7 +37,7 @@ def _downsample_batch(frames: np.ndarray, size) -> np.ndarray:
 
 def linear_baseline_on_bigger_data(train_frames, train_rewards, test_frames, test_rewards) -> dict:
     """The exact train_reward_model.py method (numpy lstsq on downsampled
-    pixels), applied to the multi-scene, held-out-by-scene split -- isolates
+    pixels), applied to the multi-scene, held-out-by-scene split. Isolates
     "did more data help the SAME model" from "did a different model help."
     """
     X_train = _downsample_batch(train_frames, DOWNSAMPLE).reshape(len(train_frames), -1)
@@ -66,7 +66,7 @@ def linear_baseline_on_bigger_data(train_frames, train_rewards, test_frames, tes
 
 class TinyRewardCNN(nn.Module):
     """Small enough for a few thousand training frames, not a few hundred
-    thousand -- three conv layers, no attempt at anything deeper, since more
+    thousand: three conv layers, no attempt at anything deeper, since more
     capacity than the data supports would just overfit."""
 
     def __init__(self):
@@ -125,7 +125,7 @@ def train_cnn_reward_model(train_frames, train_rewards, test_frames, test_reward
 
     # Aggregate MAE is dominated by the step-penalty ticks (~98% of frames),
     # which drowns out whatever the model does on the rare, actually-
-    # informative events (pickup/death/success) -- the ones a real reward
+    # informative events (pickup/death/success): the ones a real reward
     # model needs to get right. Broken out separately so that story is
     # visible rather than averaged away.
     common_mask = np.abs(test_rewards - STEP_REWARD_REF) < 1e-3

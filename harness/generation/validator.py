@@ -3,10 +3,10 @@ Semantic + physical validation pass for a scene that has already passed
 JSON-schema structural validation (schema/scene_schema.py).
 
 Checks, in order:
-  1. Referential integrity -- every id referenced by objective/doors exists.
-  2. No-overlap -- solid objects don't overlap each other, player_start and
+  1. Referential integrity: every id referenced by objective/doors exists.
+  2. No-overlap: solid objects don't overlap each other, player_start and
      goal_zone aren't embedded in solid geometry.
-  3. Reachability -- every positive event leaf in the objective (pickup/
+  3. Reachability: every positive event leaf in the objective (pickup/
      zone_enter/door_open/collision targets not wrapped in `not`) is reachable
      from player_start under the coarse grid model in pathfinding.py.
 
@@ -114,7 +114,7 @@ def check_reachability(scene: dict) -> list[str]:
         elif event == "door_open":
             door = next(o for o in scene["objects"] if o["id"] == ref_id)
             ok = door["key_id"] in held_keys  # door opens once its key is reachable+collected
-        else:  # pickup / collision -- ref_id is the object's own id
+        else:  # pickup / collision: ref_id is the object's own id
             ok = ref_id in reached_ids
         if not ok:
             errors.append(f"objective target '{ref_id}' (event={event}) is not reachable from player_start")

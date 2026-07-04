@@ -1,13 +1,13 @@
 """
-Cheap structural-distance pre-filter, run *before* the expensive
+Cheap structural-distance pre-filter, run before the expensive
 verifier/probe.run_verifier_probe (which executes two full solver runs
-against the real pymunk engine) -- so novelty-screening a batch of mutation
+against the real pymunk engine), so novelty-screening a batch of mutation
 candidates never costs more than comparing small counters.
 
 Similarity is Jaccard over the primitive-type multiset plus an exact match on
 the objective's and/or/not/leaf shape counts (behavior.rule_shape_signature).
-Not a claim of semantic similarity -- two structurally-similar scenes can
-still play very differently -- just cheap enough to skip obvious near-
+Not a claim of semantic similarity, since two structurally-similar scenes can
+still play very differently, just cheap enough to skip obvious near-
 duplicates before spending a verifier probe on them.
 """
 

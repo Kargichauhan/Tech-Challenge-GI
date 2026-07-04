@@ -1,19 +1,19 @@
 """
-A learned reward model from pixels -- explicitly the first thing to cut
+A learned reward model from pixels, explicitly the first thing to cut
 under time pressure, per the plan. Neither torch nor scikit-learn is an
 existing dependency in this environment (checked before committing to an
-approach, not assumed -- see WRITEUP's implemented-vs-envisioned table), and
+approach, not assumed; see WRITEUP's implemented-vs-envisioned table), and
 installing a deep-learning framework purely for one optional stretch
 component isn't worth the dependency weight here. This is closed-form linear
 regression (numpy's lstsq, no new dependency at all) over heavily
 downsampled first-person frames (render/raycaster.py) predicting the
-dataset_emitter's event-log-derived reward -- a genuine, honestly-scoped
+dataset_emitter's event-log-derived reward: a genuine, honestly-scoped
 stand-in for "reward model learned from pixels," not a CNN, and labeled as
 exactly that everywhere it's reported.
 
 Known, stated limitation: a single playthrough's dataset (order-100 frames)
 has far fewer examples than the downsampled feature count, so this is
-underdetermined -- numpy's lstsq returns the minimum-norm solution, but
+underdetermined. numpy's lstsq returns the minimum-norm solution, but
 held-out R^2 should be read as "does this generalize at all," not expected
 to be strong. That's a real property of training on one episode, not
 something the model choice can fix.
@@ -68,7 +68,7 @@ def train_linear_reward_model(dataset_dir: str, test_frac: float = 0.2, seed: in
     r2 = (1 - mse / baseline_mse) if baseline_mse > 0 else 0.0
 
     return {
-        "model": "linear regression (numpy lstsq) on downsampled pixels -- not a CNN, see module docstring",
+        "model": "linear regression (numpy lstsq) on downsampled pixels, not a CNN, see module docstring",
         "n_train": int(len(train_idx)), "n_test": int(len(test_idx)),
         "test_mse": round(mse, 5), "baseline_mse": round(baseline_mse, 5), "r2": round(r2, 4),
     }

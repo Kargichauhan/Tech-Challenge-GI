@@ -4,11 +4,11 @@ adversarial-exploit-rate, and validator-rejection-rate across rounds.
 Static matplotlib PNG, dark aesthetic matching render/scene_renderer.py.
 
 Palette: fixed-order categorical slots 1-3 (blue/aqua/yellow) from the
-dataviz skill's validated dark-mode palette (references/palette.md) -- these
+dataviz skill's validated dark-mode palette (references/palette.md). These
 were chosen and validated as a set for adjacent-pair colorblind-safe
 separation; using the first three in their documented order is the safe
-subset. (Could not run the JS validator directly in this environment --
-`node` isn't installed -- so this relies on the pre-validated documented
+subset. (Could not run the JS validator directly in this environment,
+since `node` isn't installed, so this relies on the pre-validated documented
 values rather than a fresh validation run.)
 """
 

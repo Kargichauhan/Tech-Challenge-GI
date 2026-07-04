@@ -53,7 +53,7 @@ def render_learning_curve(returns: list[float], scene_id: str, output_path: str,
     ax.grid(axis="y", color=GRIDLINE, linewidth=0.8, alpha=0.7)
     ax.set_axisbelow(True)
 
-    ax.set_title(f"Q-learner training curve -- {scene_id}", color=PRIMARY_INK, fontsize=13, pad=14, loc="left")
+    ax.set_title(f"Q-learner training curve: {scene_id}", color=PRIMARY_INK, fontsize=13, pad=14, loc="left")
     legend = ax.legend(loc="lower right", frameon=False, fontsize=9)
     for text in legend.get_texts():
         text.set_color(SECONDARY_INK)

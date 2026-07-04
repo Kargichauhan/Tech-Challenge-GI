@@ -3,23 +3,23 @@ Tier-2 LLM scene revision for the invention loop (harness/invention/loop.py):
 given a parent scene, ask Claude to revise it into something more
 interesting, rather than mutating it via the fixed code-based move registry
 (harness/invention/mutation.py). Structurally identical to
-claude_agent/scene_generator.py's proven pattern -- same forced (non-strict)
+claude_agent/scene_generator.py's proven pattern: same forced (non-strict)
 tool call and schema (the objective predicate is recursive, so structured
 outputs don't apply, see scene_generator.py's docstring), same defensive
 JSON-string parsing for the "objective returned as a JSON-encoded string"
 quirk observed live during that module's own testing, same bounded
 validator-rejection retry loop.
 
-Revised scenes get metadata.generator="freeform_llm" -- unlike
-mutation.propose_mutant (which deliberately preserves the parent's original
-generator value, since a code-based mutation isn't a new kind of authorship),
+Revised scenes get metadata.generator="freeform_llm". Unlike
+mutation.propose_mutant, which deliberately preserves the parent's original
+generator value since a code-based mutation isn't a new kind of authorship,
 a Claude revision genuinely is LLM-authored content, even though it started
 from an existing scene rather than a blank prompt.
 
 `make_reviser(client)` returns a `reviser(parent, rng) -> (scene_or_None,
 move_name)` closure matching the contract harness/invention/loop.py's
-explore_propose expects -- returning None on any failure (no key, API
-error, or every retry rejected) so the loop falls back to
+explore_propose expects, returning None on any failure (no key, API error,
+or every retry rejected) so the loop falls back to
 mutation.propose_mutant_with_retry automatically, exactly like
 run_claude_demo.py's relationship to run_demo.py.
 """
@@ -35,7 +35,7 @@ from harness.generation.validator import validate_and_repair
 
 MODEL = "claude-opus-4-8"
 MAX_ATTEMPTS = 3
-REQUEST_TIMEOUT_SECONDS = 60.0  # fail loud on a blocked/unreachable network rather than hang on the SDK's own (much longer) default
+REQUEST_TIMEOUT_SECONDS = 60.0  # fail loud on a blocked/unreachable network rather than hang on the SDK's own, much longer, default
 
 SYSTEM_PROMPT = """You revise EXISTING 2D platformer scene specifications for a physics-based \
 game harness, to make them more interesting to play -- not generating from scratch.
@@ -129,8 +129,8 @@ def revise_scene_via_claude(parent: dict, client: anthropic.Anthropic | None = N
 
 
 def make_reviser(client: anthropic.Anthropic, verbose: bool = True):
-    """`verbose=True` prints *why* a revision attempt fell back to mutation --
-    the fallback itself was previously silent (any exception, or an exhausted
+    """`verbose=True` prints why a revision attempt fell back to mutation.
+    The fallback itself was previously silent (any exception, or an exhausted
     validator-retry ladder, just returned None with no trace), which made a
     100%-fallback run indistinguishable from a working-but-unlucky one. Set
     False to suppress (e.g. if a caller wants to inspect failures itself)."""

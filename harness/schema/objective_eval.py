@@ -1,6 +1,6 @@
 """Evaluate an objective predicate (schema/scene_schema.py's objective
 language) against an event log (schema/event_log_schema.md). Order-blind by
-design -- see event_log_schema.md for why."""
+design; see event_log_schema.md for why."""
 
 
 def evaluate(node: dict, event_log: list[dict]) -> bool:

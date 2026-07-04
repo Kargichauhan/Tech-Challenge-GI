@@ -2,13 +2,13 @@
 """
 The "maze with lava traps and a locked door" pattern: a winding, zigzagging
 platform path (harness/generation/maze.py) rather than the simple generator's
-flat line of platforms -- same primitive library (platform/hazard/key/door),
-same validate_and_repair pipeline, no new schema. Genuine-solver reliability
-on this pattern is honestly lower than the simple combos (~60% across random
-seeds, similar in spirit to the existing 5-primitive combo's ~50% -- more
-consecutive precision jumps means more ways for the honest solver's hop
-alignment to come up short), so this demo uses a seed confirmed to solve
-cleanly rather than claiming every seed does.
+flat line of platforms, using the same primitive library (platform/hazard/
+key/door) and the same validate_and_repair pipeline, no new schema.
+Genuine-solver reliability on this pattern is honestly lower than the simple
+combos (~60% across random seeds, similar in spirit to the existing
+5-primitive combo's ~50%, since more consecutive precision jumps means more
+ways for the honest solver's hop alignment to come up short), so this demo
+uses a seed confirmed to solve cleanly rather than claiming every seed does.
 
 Run:  source .venv/bin/activate && python3 run_maze_demo.py [seed]
 Output: runs/maze/<scene_id>.gif, runs/maze/<scene_id>.json

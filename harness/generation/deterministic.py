@@ -1,5 +1,5 @@
 """
-Deterministic, seeded procedural scene generator -- zero external
+Deterministic, seeded procedural scene generator: zero external
 dependencies, zero API key required. This is the guaranteed demo path (plan
 item 5): reviewers can run this end to end with nothing but the local venv.
 
@@ -28,7 +28,7 @@ def _base_platforms(rng: random.Random) -> list[dict]:
     n = rng.randint(2, 4)
     for i in range(n):
         w = rng.randint(120, 220)
-        y = GROUND_Y - rng.choice([90, 160])  # strictly above the ground plane -- never 0, which would overlap it
+        y = GROUND_Y - rng.choice([90, 160])  # strictly above the ground plane; never 0, which would overlap it
         objs.append({"id": f"platform_{i}", "type": "platform", "x": x, "y": y, "width": w, "height": 24})
         x += w + rng.randint(60, 100)
     return objs
@@ -43,7 +43,7 @@ def _span(lo, hi):
 
 def generate_scene(seed: int, primitive_combo: list[str] | None = None, prompt: str | None = None) -> tuple[dict | None, dict]:
     """primitive_combo restricts which of the 6 primitives (beyond the base
-    ground/platforms, which are always present) may be sampled -- this is the
+    ground/platforms, which are always present) may be sampled. This is the
     hook generation-policy adaptation (step 7) uses to bias future rounds
     toward/away from specific combos. Defaults to all 6.
     """

@@ -3,7 +3,7 @@
 The vision-policy bridge demo: renders a solved playthrough two ways side by
 side (the existing top-down view and the new corridor-perspective first-
 person view, render/raycaster.py), and exports a (frame, action, reward)
-dataset in the challenge's action vocabulary (render/dataset_emitter.py --
+dataset in the challenge's action vocabulary (render/dataset_emitter.py;
 see its docstring for the honest mapping caveat). No API key, no network.
 
 Run:  source .venv/bin/activate && python3 run_dataset_export.py [seed]
@@ -49,9 +49,9 @@ def main():
     print(f"Dataset: {dataset_dir}/frames.npz, {dataset_dir}/records.jsonl")
 
     print("\nFitting the optional reward-model stretch piece (linear regression on "
-          "downsampled pixels -- not a CNN; see harness/render/train_reward_model.py)...")
+          "downsampled pixels, not a CNN; see harness/render/train_reward_model.py)...")
     if summary["n_records"] < 10:
-        print("Too few frames from this single playthrough to fit/evaluate a held-out split -- skipping.")
+        print("Too few frames from this single playthrough to fit/evaluate a held-out split, skipping.")
     else:
         model_report = train_linear_reward_model(dataset_dir)
         print(f"  {model_report['model']}")

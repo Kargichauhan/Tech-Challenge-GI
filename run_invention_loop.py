@@ -40,7 +40,7 @@ def main():
     if args.claude:
         has_key = bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"))
         if not has_key:
-            print("--claude given but no ANTHROPIC_API_KEY set -- proceeding with deterministic mutation only.")
+            print("--claude given but no ANTHROPIC_API_KEY set. Proceeding with deterministic mutation only.")
         else:
             import anthropic
 
@@ -53,7 +53,7 @@ def main():
     if reviser:
         print(f"(--claude makes one real, blocking network call per candidate, up to "
               f"{args.rounds * args.batch_size} total this run, each capped at "
-              f"{REQUEST_TIMEOUT_SECONDS:.0f}s -- progress prints per candidate below "
+              f"{REQUEST_TIMEOUT_SECONDS:.0f}s. Progress prints per candidate below, "
               f"since this can take a while.)\n")
 
     def on_round_start(label):
@@ -85,8 +85,8 @@ def main():
     for round_report in rounds:
         label = round_report["round"] if isinstance(round_report["round"], str) else f"round {round_report['round']}"
         n_accepted = sum(1 for r in round_report["results"] if r.get("accepted"))
-        print(f"[{label:>8}] {n_accepted}/{len(round_report['results'])} accepted into the archive "
-              f"-- coverage now {round_report['coverage']:.2%}")
+        print(f"[{label:>8}] {n_accepted}/{len(round_report['results'])} accepted into the archive, "
+              f"coverage now {round_report['coverage']:.2%}")
 
     report_path = os.path.join(OUTPUT_DIR, "report.json")
     with open(report_path, "w") as f:

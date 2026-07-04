@@ -1,5 +1,5 @@
 """
-Claude-driven navigation -- the other half of the "upgrade layer" (plan item
+Claude-driven navigation, the other half of the "upgrade layer" (plan item
 9). Claude picks a discrete controller action (move_left/move_right/jump/noop)
 from a text description of the current game state, mirroring the vision
 policy's per-frame action space (move forward/back/left/right + look) but
@@ -7,25 +7,25 @@ with a text observation standing in for the rendered frame, per the
 challenge's own framing that 2D + text-level reasoning doesn't need the
 vision policy.
 
-Each decision point is a fresh, single-turn call (no growing conversation) --
-keeps cost and latency bounded regardless of how long an episode runs, and
-mirrors a policy that reacts to the current frame rather than replaying full
-history every step.
+Each decision point is a fresh, single-turn call with no growing
+conversation. This keeps cost and latency bounded regardless of how long an
+episode runs, and mirrors a policy that reacts to the current frame rather
+than replaying full history every step.
 
 IMPORTANT: a "jump" decision is held for the whole TICKS_PER_DECISION window
 (~0.25s), and the underlying engine action model treats move/jump as mutually
 exclusive per tick (matches physics_engine.step: choosing "jump" sets
 horizontal velocity to 0 for that tick). A naive "hold jump for the whole
 window" would rise straight up with zero horizontal movement for the entire
-quarter-second -- physically incapable of clearing any gap or hazard,
-regardless of prompting. The deterministic solvers (solvers/common.py)
-sidestep this by re-deciding the action every single tick (jump for exactly
-one tick, then move for the rest); the navigator can't do that per-tick
-replanning without a tool call per tick, which would be far too slow/costly.
-Instead, _execute_decision composes a single "jump" choice into the same
-shape: one tick of vertical launch, then the rest of the window continuing
-whatever horizontal direction was most recently chosen -- so Claude only has
-to decide *when* to jump, not micromanage the two-tick sequencing itself.
+quarter-second, physically incapable of clearing any gap or hazard regardless
+of prompting. The deterministic solvers (solvers/common.py) sidestep this by
+re-deciding the action every single tick (jump for exactly one tick, then
+move for the rest); the navigator can't do that per-tick replanning without a
+tool call per tick, which would be far too slow and costly. Instead,
+_execute_decision composes a single "jump" choice into the same shape: one
+tick of vertical launch, then the rest of the window continuing whatever
+horizontal direction was most recently chosen, so Claude only has to decide
+when to jump, not micromanage the two-tick sequencing itself.
 """
 
 from __future__ import annotations
@@ -105,7 +105,7 @@ def _describe_observation(scene: dict, engine, last_direction: str) -> str:
 def _execute_decision(engine, action: str, last_direction: str, max_ticks: int = TICKS_PER_DECISION) -> str:
     """Runs one Claude decision for up to `max_ticks` engine ticks. For
     "jump", composes it as one tick of vertical launch followed by the
-    remaining ticks continuing `last_direction` -- see module docstring for
+    remaining ticks continuing `last_direction`; see module docstring for
     why a naive "hold jump the whole window" can never clear anything.
     Returns the (possibly updated) last_direction for the next decision.
     """

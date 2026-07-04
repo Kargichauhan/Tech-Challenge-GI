@@ -3,7 +3,7 @@
 Human-playable mode: an actual interactive window, not just a solver trace.
 Arrow keys to move, space/up to jump.
 
-Jump is triggered on key-down, not "held" -- physics_engine.step() treats
+Jump is triggered on key-down, not "held": physics_engine.step() treats
 move and jump as mutually exclusive within a single tick (choosing "jump"
 zeroes horizontal velocity for that tick, see navigator.py's docstring for
 the full explanation of why). Holding jump down every frame would repeatedly
@@ -11,7 +11,7 @@ re-zero horizontal velocity and feel broken; firing it for exactly the one
 tick where the key was first pressed (matching how the deterministic solvers
 and the Claude navigator both use it) gives a normal one-tap-per-jump feel.
 
-Needs a real display (X11/Wayland/etc.) -- run locally, not over a headless
+Needs a real display (X11/Wayland/etc.); run locally, not over a headless
 SSH session. harness/render/scene_renderer.py forces SDL_VIDEODRIVER=dummy
 at import time for headless GIF rendering; we grab a real video driver via
 pygame.display.init() *before* importing it, since pygame.display.init() is
@@ -45,7 +45,7 @@ def play(scene: dict) -> str | None:
     engine = Engine(scene)
     w, h = scene["world"]["width"], scene["world"]["height"]
     screen = pygame.display.set_mode((w, h))
-    pygame.display.set_caption(f"playing: {scene['id']} -- arrows to move, space/up to jump")
+    pygame.display.set_caption(f"playing: {scene['id']}, arrows to move, space/up to jump")
     clock = pygame.time.Clock()
 
     pending_jump = False
@@ -94,8 +94,8 @@ def main():
     driver = pygame.display.get_driver()
     if driver in ("dummy", "offscreen"):
         print(
-            f"No real display found (SDL fell back to the '{driver}' driver) -- "
-            "this needs an actual X11/Wayland session (or X-forwarding over SSH: "
+            f"No real display found (SDL fell back to the '{driver}' driver). "
+            "This needs an actual X11/Wayland session (or X-forwarding over SSH: "
             "ssh -X) to show a window. Run it on a machine with a display attached."
         )
         sys.exit(1)

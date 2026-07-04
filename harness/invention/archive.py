@@ -4,12 +4,13 @@ occupant the single best-fitness scene found so far for that cell. See
 behavior.py's docstring for why the grid is 2D rather than the full 4D the
 strategy document describes (a scoping decision, not a silent omission).
 
-Fitness rewards moderate, frontier-appropriate regret (not zero -- a scene
-the honest solver clears exactly at par isn't interesting to keep exploring
-around -- and not huge, which usually means the mutation broke something
-rather than made it meaningfully harder) and penalizes exploitability
-(regret.compute_exploit_severity), so a cell's occupant isn't just "hardest
-to solve honestly" but "hardest to solve honestly *and* hard to shortcut."
+Fitness rewards moderate, frontier-appropriate regret (not zero, since a
+scene the honest solver clears exactly at par isn't interesting to keep
+exploring around, and not huge, which usually means the mutation broke
+something rather than made it meaningfully harder) and penalizes
+exploitability (regret.compute_exploit_severity), so a cell's occupant
+isn't just "hardest to solve honestly" but "hardest to solve honestly and
+hard to shortcut."
 """
 
 from __future__ import annotations
@@ -40,7 +41,7 @@ class MapElitesArchive:
 
     def insert(self, key: tuple, scene: dict, probe: dict, fitness: float, metadata: dict) -> bool:
         """Returns True if this candidate became (or stayed) the cell's
-        occupant -- either the cell was empty, or the candidate beat the
+        occupant: either the cell was empty, or the candidate beat the
         incumbent's fitness."""
         current = self.cells.get(key)
         if current is not None and current["fitness"] >= fitness:
@@ -58,7 +59,7 @@ class MapElitesArchive:
 
     def sparsest_cells(self, n: int) -> list[tuple]:
         """All possible behavior keys not yet filled, or filled with the
-        lowest fitness -- used by play_select_target (loop.py) to pick
+        lowest fitness. Used by play_select_target (loop.py) to pick
         revision targets that grow the archive's frontier rather than
         polishing an already-strong cell."""
         empty = [(p, i) for p in range(self.path_length_bins) for i in range(self.interaction_bins)

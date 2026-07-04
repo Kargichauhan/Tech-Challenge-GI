@@ -1,26 +1,26 @@
 """
-Per-tick (frame, action, reward) dataset export for a solved playthrough --
+Per-tick (frame, action, reward) dataset export for a solved playthrough:
 the actual bridge artifact toward the challenge's vision-policy action space
 (move forward/back/left/right + mouse look), built on top of the corridor-
 perspective raycaster (raycaster.py).
 
 Honest mapping caveat, stated plainly rather than assumed: this world has
-one true movement axis (left/right) plus jump -- there is no lateral strafe
+one true movement axis (left/right) plus jump. There is no lateral strafe
 axis and no camera that turns independently of movement. The mapping below
 is a labeled, approximate bridge, not a claim of action-space equivalence:
   - move_forward / move_backward: our move_left/move_right, resolved
-    relative to the heading *before* this tick -- continuing the same
+    relative to the heading before this tick. Continuing the same
     direction is "forward," reversing it is "backward" (and simultaneously
     triggers the mouse turn below, matching a character that always faces
     its most recent direction of travel).
-  - strafe_left / strafe_right: always 0.0 -- there is no lateral axis to
-    strafe into. Present-but-zero rather than omitted, so a downstream
+  - strafe_left / strafe_right: always 0.0, since there is no lateral axis
+    to strafe into. Present-but-zero rather than omitted, so a downstream
     consumer expecting the full 6-value vocabulary doesn't have to guess
     whether the field is missing or genuinely always zero.
   - mouse_delta_x: 0 except on the tick a heading flip happens, where it
-    carries a nominal +-180 degree turn -- our one real "look elsewhere" event.
+    carries a nominal +-180 degree turn, our one real "look elsewhere" event.
   - mouse_delta_y: a small positive value while airborne from a jump (a
-    "glancing up mid-arc" heuristic), 0 otherwise -- not derived from any
+    "glancing up mid-arc" heuristic), 0 otherwise. Not derived from any
     real camera pitch, since this world doesn't have one.
 
 Reward is entirely event-log-derived (code-verified, not learned/guessed):
@@ -51,9 +51,9 @@ DEATH_REWARD = -1.0
 def export_dataset(scene: dict, trace_runner, output_dir: str, total_max_ticks: int = 60 * 25) -> dict:
     """`trace_runner(engine, total_max_ticks)` supplies the playthrough,
     same contract as gif_builder.build_gif. Writes:
-      <output_dir>/frames.npz     -- stacked first-person RGB frames, one per captured tick
-      <output_dir>/records.jsonl  -- one JSON object per captured tick (frame index, our_action,
-                                      mapped_action in their vocabulary, reward, cumulative_reward)
+      <output_dir>/frames.npz     stacked first-person RGB frames, one per captured tick
+      <output_dir>/records.jsonl  one JSON object per captured tick (frame index, our_action,
+                                   mapped_action in their vocabulary, reward, cumulative_reward)
     Returns a small summary dict (n_frames, total_reward, result).
     """
     os.makedirs(output_dir, exist_ok=True)
@@ -83,8 +83,8 @@ def export_dataset(scene: dict, trace_runner, output_dir: str, total_max_ticks: 
         state["cumulative_reward"] += reward
 
         # Always capture a stride-aligned tick for background/negative
-        # examples, PLUS any tick with a non-default reward (pickup, death,
-        # success) regardless of stride -- these are single-tick events, and
+        # examples, plus any tick with a non-default reward (pickup, death,
+        # success) regardless of stride. These are single-tick events, and
         # missing them at a 1-in-TICK_STRIDE sampling rate was a real bug:
         # verified live, it made an exported multi-scene dataset >99.7% a
         # single repeated step-penalty value, with success/pickup frames

@@ -46,13 +46,13 @@ def _result_headline(label: str, result: str | None) -> tuple[str, tuple[int, in
 
 def render_result_frame(scene: dict, probe: dict, trace_label: str | None = None, trace_result: str | None = None):
     """`trace_label`/`trace_result` describe whoever's run is actually shown
-    as the GIF's visual trace (e.g. "CLAUDE'S NAVIGATION", "died") -- this can
+    as the GIF's visual trace (e.g. "CLAUDE'S NAVIGATION", "died"). This can
     differ from `probe['genuine_result']`, which is always the deterministic
     baseline solver run separately for comparison. Conflating the two would
     mislead a viewer into thinking the displayed trace achieved whatever the
     baseline solver did. When trace_label is None (the deterministic-demo
-    case), the trace *is* the genuine solver, so there's nothing to
-    disambiguate -- keep the single "GENUINE SOLVE" headline.
+    case), the trace is the genuine solver, so there's nothing to
+    disambiguate; keep the single "GENUINE SOLVE" headline.
     """
     import pygame
     w, h = scene["world"]["width"], scene["world"]["height"]
@@ -76,7 +76,7 @@ def render_result_frame(scene: dict, probe: dict, trace_label: str | None = None
         y += 34
 
     if not probe["honest_baseline_confirmed"]:
-        _draw_text(surf, "(no confirmed honest solve for this scene -- see below)", (w // 2, y),
+        _draw_text(surf, "(no confirmed honest solve for this scene, see below)", (w // 2, y),
                     size=16, color=COLORS["text_dim"], center=True)
         y += 40
 
@@ -134,21 +134,21 @@ def build_gif(scene: dict, output_path: str, total_max_ticks: int = 60 * 25, tra
     then a second fresh run purely to capture rendered frames (kept separate
     from the probe's own run so instrumenting one never risks perturbing the
     other's tick-for-tick determinism). Returns the probe dict (useful for
-    batch reporting alongside the GIF) with an added "trace_result" key --
+    batch reporting alongside the GIF) with an added "trace_result" key:
     whatever `trace_runner` itself returned as its result, distinct from
     `probe["genuine_result"]` (the baseline solver run separately).
 
-    `trace_runner(engine, total_max_ticks)` supplies the visual trace -- the
+    `trace_runner(engine, total_max_ticks)` supplies the visual trace: the
     genuine solver by default, or e.g. a ClaudeNavigator's `.solve` for the
     Claude-API upgrade layer (harness/claude_agent/navigator.py), so the
-    *displayed* playthrough matches whichever agent actually generated it.
+    displayed playthrough matches whichever agent actually generated it.
     Pass `trace_label` (e.g. "CLAUDE'S NAVIGATION") whenever trace_runner is
     NOT the genuine solver, so the result screen doesn't conflate the two.
 
     `dual_render=True` places the corridor-perspective first-person view
     (render/raycaster.py) alongside the existing top-down view, tracking a
     facing direction the same way navigator.py's last_direction does. False
-    by default -- the deterministic demo (run_demo.py) and the Claude demo
+    by default; the deterministic demo (run_demo.py) and the Claude demo
     are both unaffected, only run_dataset_export.py opts in.
     """
     probe = run_verifier_probe(scene, total_max_ticks)
@@ -169,7 +169,7 @@ def build_gif(scene: dict, output_path: str, total_max_ticks: int = 60 * 25, tra
     # A long/dual-render trace (e.g. run_maze_demo.py) can be thousands of frames.
     # imageio's GIF writer holds every appended frame's encoder state in memory for
     # the life of the call (measured: ~3.8GB peak on this scene, vs ~80MB for the
-    # rendering loop alone with the writer removed) -- so frames are produced by a
+    # rendering loop alone with the writer removed), so frames are produced by a
     # background thread and pulled one at a time into PIL's own save_all(), which
     # only keeps the current frame plus a small lookback for palette/dispose state.
     # Measured fix: same scene, same frame count, ~170MB peak instead of ~3.8GB.

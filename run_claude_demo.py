@@ -3,7 +3,7 @@
 The Claude-API upgrade layer (plan item 9): a free-text prompt becomes a
 scene via the live Claude API, then Claude itself navigates the result
 (per-decision-point tool calls, not the deterministic solver). Requires
-ANTHROPIC_API_KEY -- this is explicitly NOT the guaranteed demo path; see
+ANTHROPIC_API_KEY. This is explicitly NOT the guaranteed demo path; see
 run_demo.py for the zero-dependency deterministic path the submission does
 not depend on live API access for.
 

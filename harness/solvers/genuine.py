@@ -1,12 +1,12 @@
 """
-Genuine solver: plays a scene "honestly" -- collects whatever the objective's
+Genuine solver: plays a scene "honestly," collecting whatever the objective's
 positive event leaves require (keys/pickups) before heading to the goal zone,
 i.e. respecting the intended dependency order the scene was built around.
 Contrast with solvers/adversarial.py, which deliberately does NOT respect
 that order and instead goes for whatever satisfies the objective cheapest.
 
 Replans from the player's actual live position after every planned path
-rather than committing blindly to a stale multi-waypoint plan: the coarse
+rather than committing blindly to a stale multi-waypoint plan. The coarse
 grid model (generation/pathfinding.py) simulates the real jump physics, but
 live execution can still drift (e.g. a hop's actual landing cell differs
 from the plan by a cell), and only re-planning on that kind of divergence
@@ -38,7 +38,7 @@ def _extract_targets(scene: dict) -> list[str]:
         if tid not in seen:
             seen.add(tid)
             targets.append(tid)
-    targets.sort(key=lambda t: t == "goal_zone")  # goal_zone always last -- the "honest" order
+    targets.sort(key=lambda t: t == "goal_zone")  # goal_zone always last: the "honest" order
     return targets
 
 
@@ -72,7 +72,7 @@ class GenuineSolver:
                     # Grid says the player's current cell already overlaps
                     # the target, but the engine hasn't registered arrival
                     # (grid discretization is coarser than the target's real
-                    # rectangle) -- nudge toward the exact world position
+                    # rectangle). Nudge toward the exact world position
                     # instead of a no-op hop loop (see common.nudge_toward).
                     nudge_toward(engine, target_world_x(self.scene, target), min(PER_HOP_MAX_TICKS, total_max_ticks - engine.tick_count))
                     continue
@@ -93,7 +93,7 @@ class GenuineSolver:
                     if engine.result is not None:
                         break
                     if not target_reached(engine, target) and player_cell(engine) != waypoint:
-                        break  # drifted from plan -- fall through to replan from actual position
+                        break  # drifted from plan: fall through to replan from actual position
             if engine.result is not None:
                 break
         while engine.result is None and engine.tick_count < total_max_ticks:

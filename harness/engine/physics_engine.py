@@ -6,8 +6,8 @@ move_left/move_right/jump/noop), and appends structured events to the event
 log per schema/event_log_schema.md.
 
 Hazards, doors-while-locked, platforms, and ramps are all solid (blocking)
-shapes -- per the approved event-log design, the player is "supposed to be
-blocked by" all of them, which is what makes a boundary_clip (tunneling
+shapes. Per the approved event-log design, the player is supposed to be
+blocked by all of them, which is what makes a boundary_clip (tunneling
 through one) a meaningful exploit rather than expected behavior.
 """
 
@@ -56,7 +56,7 @@ class Engine:
         # permanently freeze the player mid-level. Disable sleeping entirely.
         self.space.sleep_time_threshold = float("inf")
         self.event_log: list[dict] = []
-        self.boundary_clips: list[dict] = []  # diagnostic log, not gameplay events
+        self.boundary_clips: list[dict] = []  # diagnostic log; not gameplay events
         self.t = 0.0
         self.tick_count = 0
         self.result: str | None = None  # None (running) | "success" | "death" | "timeout"
@@ -67,8 +67,8 @@ class Engine:
         self.shape_meta: dict = {}  # pymunk Shape -> {"id","type","obj"}
         self._to_remove: list = []
         # Persistent (not per-tick) touching state. Pymunk fires `begin` only
-        # once when contact *starts*, not on every tick contact continues --
-        # so a per-tick-only record would treat every tick of legitimate
+        # once when contact starts, not on every tick contact continues, so
+        # a per-tick-only record would treat every tick of legitimate
         # ongoing contact (e.g. sliding down along a wall after a normal
         # collision) as "no collision event this tick," misclassifying it as
         # a boundary_clip. Tracking begin/separate persistently distinguishes
@@ -118,7 +118,7 @@ class Engine:
         self._add_static(pts, (gz["x"], gz["y"]), CT_ZONE, True, {"id": "goal_zone", "type": "zone", "obj": gz})
 
         ps = self.scene["player_start"]
-        # Infinite moment of inertia -- torque from asymmetric collisions
+        # Infinite moment of inertia: torque from asymmetric collisions
         # (e.g. landing slightly off-center) can never rotate the body. Without
         # this the player can tip over, which then misaligns the feet-sensor
         # shape (assumed to point straight down) and breaks grounded detection.
@@ -127,13 +127,13 @@ class Engine:
         main_shape = pymunk.Poly.create_box(body, (PLAYER_W, PLAYER_H))
         main_shape.collision_type = CT_PLAYER
         main_shape.friction = 0.0
-        # Same width as the main box, not inset -- if a corner/edge contact is
+        # Same width as the main box, not inset. If a corner/edge contact is
         # wide enough to physically hold the main shape up (pinning velocity
         # via contact resolution), the feet sensor must be wide enough to
         # detect that same contact. An inset sensor can miss a "just barely
         # caught the edge" landing that the main shape nonetheless rests on,
-        # leaving grounded_count stuck at 0 while gravity is a no-op --
-        # a real deadlock (can't jump, can't fall) for the controller.
+        # leaving grounded_count stuck at 0 while gravity is a no-op: a real
+        # deadlock (can't jump, can't fall) for the controller.
         feet_shape = pymunk.Poly(body, [
             (-PLAYER_W / 2, PLAYER_H / 2 - 4), (PLAYER_W / 2, PLAYER_H / 2 - 4),
             (PLAYER_W / 2, PLAYER_H / 2 + 4), (-PLAYER_W / 2, PLAYER_H / 2 + 4),
@@ -274,14 +274,14 @@ class Engine:
 
     def _check_boundary_clip(self, prev_pos, curr_pos):
         """Native continuous-collision check (pymunk segment_query), per the
-        approved event_log_schema.md design -- not a bbox/trajectory heuristic.
+        approved event_log_schema.md design, not a bbox/trajectory heuristic.
         If the swept path from prev_pos to curr_pos crosses a shape that is
         currently solid (blocking), and pymunk's own arbiter system does not
         currently consider the player to be touching it (see
-        `_currently_touching` -- begin/separate tracked persistently, not
-        just this tick's *new* begin events, since pymunk only fires `begin`
-        once when contact starts, not on every tick contact continues), the
-        player tunneled through it.
+        `_currently_touching`, begin/separate tracked persistently rather
+        than just this tick's new begin events, since pymunk only fires
+        `begin` once when contact starts, not on every tick contact
+        continues), the player tunneled through it.
         """
         if prev_pos == curr_pos:
             return

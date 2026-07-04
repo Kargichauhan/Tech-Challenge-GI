@@ -1,10 +1,10 @@
 """
 Aggregates (frame, action, reward) data across MANY solved scenes, not just
-one -- built specifically to test whether the original reward model's poor
+one. Built specifically to test whether the original reward model's poor
 R^2 (train_reward_model.py, disclosed in the README) was a data-volume
 problem rather than a model-choice problem. Scenes are drawn from the same
 generators the rest of the repo already trusts (deterministic.py's named
-combos, maze.py's zigzag layout) -- no new generation logic, no relaxed
+combos, maze.py's zigzag layout): no new generation logic, no relaxed
 validation.
 
 Held out **by scene**, not by frame: a model that never saw a given scene
@@ -48,7 +48,7 @@ def _candidate_scenes(rng: random.Random, n_per_combo: int, n_maze: int) -> list
 def build_multi_scene_dataset(output_dir: str, n_per_combo: int = 5, n_maze: int = 8,
                                total_max_ticks: int = 1800, seed: int = 0) -> list[dict]:
     """Generates candidate scenes, keeps only the ones GenuineSolver actually
-    solves (same honesty bar as everywhere else in this repo -- no scene
+    solves (same honesty bar as everywhere else in this repo: no scene
     that isn't confirmed solved contributes training data), and exports each
     via the existing dataset_emitter. Returns a manifest list of per-scene
     summaries; frames/records are written to <output_dir>/<scene_id>/."""
@@ -71,10 +71,10 @@ def build_multi_scene_dataset(output_dir: str, n_per_combo: int = 5, n_maze: int
 
 def load_scene_frames(scene_dir: str):
     """Returns (frames: list of (H,W,3) uint8 arrays, rewards: (N,) float
-    array). Frames stay a plain list, not a stacked array -- different
+    array). Frames stay a plain list, not a stacked array, because different
     scenes render at different world widths (deterministic.py/maze.py size
     the world to fit the generated content), so frames only share a common
-    shape *within* one scene, never across scenes until each is individually
+    shape within one scene, never across scenes until each is individually
     downsampled to a fixed size."""
     frames = np.load(os.path.join(scene_dir, "frames.npz"))["frames"]
     with open(os.path.join(scene_dir, "records.jsonl")) as f:
@@ -84,7 +84,7 @@ def load_scene_frames(scene_dir: str):
 
 
 def split_manifest(manifest: list[dict], holdout_frac: float = 0.25, seed: int = 0) -> tuple[list[dict], list[dict]]:
-    """Splits by SCENE, not by frame -- see module docstring."""
+    """Splits by SCENE, not by frame; see module docstring."""
     rng = random.Random(seed)
     shuffled = list(manifest)
     rng.shuffle(shuffled)
@@ -94,7 +94,7 @@ def split_manifest(manifest: list[dict], holdout_frac: float = 0.25, seed: int =
 
 def load_split(manifest_entries: list[dict]):
     """Returns (frames: flat list of (H,W,3) arrays, rewards: (N,) array)
-    across a list of manifest entries -- see load_scene_frames for why
+    across a list of manifest entries; see load_scene_frames for why
     frames stay a plain list rather than a stacked array."""
     all_frames, all_rewards = [], []
     for entry in manifest_entries:
