@@ -25,7 +25,7 @@ Full design rationale and bug-by-bug story: [WRITEUP.md](WRITEUP.md), optional. 
 
 ---
 
-## Why this covers the brief
+## Brief
 
 **Creativity.** Scenes come from text two different ways: Claude can read a prompt and generate one directly (`run_claude_demo.py`), or a code-based generator can build one with no LLM involved at all. A second agent then tries to reward-hack whatever the objective is, and a classifier reports how it managed it (or didn't). On top of that, an invention loop mutates and revises scenes on its own, including changing the shape of the objective itself, and keeps an archive of what it finds. All of it is playable live from the dashboard above.
 
