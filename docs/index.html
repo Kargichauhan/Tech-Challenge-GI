@@ -141,30 +141,63 @@
   }
   .promptbar-note b { color: var(--ink-dim); font-weight: 600; }
 
-  /* -- scenario bar -- */
-  .scenario-bar {
+  /* -- step chips -- */
+  .step-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 6px;
+    margin-right: 8px;
+    border-radius: 100px;
+    background: var(--goal);
+    color: var(--bench);
+    font-size: 10.5px;
+    font-weight: 700;
+  }
+  .section-label-secondary .step-chip { background: var(--ink-faint); }
+
+  /* -- scenario card grid -- */
+  .scenario-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  @media (max-width: 520px) {
+    .scenario-grid { grid-template-columns: 1fr; }
+  }
+  .scenario-card {
+    text-align: left;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 12px;
+    gap: 3px;
     background: var(--panel-inset);
     border: 1px solid var(--bevel);
     border-radius: 6px;
-    margin-bottom: 8px;
-  }
-  .scenario-bar .glyph { color: var(--goal); font-weight: 700; }
-  .scenario-bar select {
-    width: 100%;
-    background: var(--panel);
-    border: 1px solid var(--bevel-lit);
-    border-radius: 4px;
-    outline: none;
-    color: var(--ink);
+    padding: 10px 12px;
+    cursor: pointer;
     font-family: inherit;
-    font-size: 13px;
-    padding: 10px 10px;
   }
-  .scenario-bar button {
+  .scenario-card:hover { border-color: var(--bevel-lit); }
+  .scenario-card:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .scenario-card.active {
+    border-color: var(--goal);
+    background: rgba(87,214,138,0.09);
+  }
+  .scenario-card-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .scenario-card.active .scenario-card-title::before { content: "\25B6"; color: var(--goal); font-size: 10px; }
+  .scenario-card-desc { font-size: 11px; color: var(--ink-faint); line-height: 1.4; }
+
+  .compare-btn {
     width: 100%;
     font-family: inherit;
     font-size: 12px;
@@ -175,12 +208,13 @@
     background: var(--goal);
     border: none;
     border-radius: 4px;
-    padding: 12px 14px;
+    padding: 13px 14px;
     cursor: pointer;
+    margin-bottom: 10px;
   }
-  .scenario-bar button:hover { filter: brightness(1.1); }
-  .scenario-bar button:disabled { opacity: 0.5; cursor: default; filter: none; }
-  .scenario-bar button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .compare-btn:hover { filter: brightness(1.1); }
+  .compare-btn:disabled { opacity: 0.5; cursor: default; filter: none; }
+  .compare-btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
   .scenario-note {
     font-size: 11px;
     color: var(--ink-faint);
@@ -191,7 +225,6 @@
 
   /* -- verdict panel -- */
   .verdict-panel {
-    display: none;
     margin-bottom: 14px;
     background: var(--panel-inset);
     border: 1px solid var(--bevel);
@@ -199,7 +232,6 @@
     padding: 12px 14px;
     font-size: 12px;
   }
-  .verdict-panel.show { display: block; }
   .verdict-row {
     display: flex;
     align-items: baseline;
@@ -408,28 +440,42 @@
   </p>
 
   <div class="console">
-    <div class="section-label">1 &middot; pick a scene and compare</div>
-    <div class="scenario-bar">
-      <select id="scenarioSelect">
-        <option value="gameable">Gameable — locked door with a shortcut over the top</option>
-        <option value="robust">Robust — same door, too tall to hop</option>
-        <option value="maze" selected>The maze — lava traps + locked door</option>
-        <option value="canOnTable">A table with a can on it</option>
-      </select>
-      <button id="compareBtn">&#9654; Watch: honest vs. adversarial</button>
+    <div class="section-label"><span class="step-chip">1</span>choose a scenario</div>
+    <div class="scenario-grid" id="scenarioGrid">
+      <button class="scenario-card" data-scenario="gameable">
+        <span class="scenario-card-title">Gameable objective</span>
+        <span class="scenario-card-desc">A locked door with a shortcut over the top</span>
+      </button>
+      <button class="scenario-card" data-scenario="robust">
+        <span class="scenario-card-title">Robust objective</span>
+        <span class="scenario-card-desc">Same door, too tall to hop over</span>
+      </button>
+      <button class="scenario-card active" data-scenario="maze">
+        <span class="scenario-card-title">The maze</span>
+        <span class="scenario-card-desc">Lava traps + a locked door</span>
+      </button>
+      <button class="scenario-card" data-scenario="canOnTable">
+        <span class="scenario-card-title">Can on a table</span>
+        <span class="scenario-card-desc">The brief's own example, nothing to exploit</span>
+      </button>
     </div>
+
+    <div class="section-label"><span class="step-chip">2</span>run the comparison</div>
+    <button id="compareBtn" class="compare-btn">&#9654; watch: honest agent vs. adversarial agent</button>
     <p class="scenario-note">
       Honest visits whatever the objective requires, in order, and never forces a locked door.
       Adversarial beelines for the goal and rams anything in the way, only fetching what's
       required if ramming truly fails. Same physics, same rules, just a different policy.
     </p>
+
+    <div class="section-label"><span class="step-chip">3</span>read the verdict</div>
     <div class="verdict-panel" id="verdictPanel">
-      <div class="verdict-row"><span class="who">honest agent</span><span class="outcome" id="honestOutcome">—</span></div>
-      <div class="verdict-row"><span class="who">adversarial agent</span><span class="outcome" id="adversarialOutcome">—</span></div>
-      <div class="verdict-final" id="verdictFinal"></div>
+      <div class="verdict-row"><span class="who">honest agent</span><span class="outcome" id="honestOutcome">waiting to run</span></div>
+      <div class="verdict-row"><span class="who">adversarial agent</span><span class="outcome" id="adversarialOutcome">waiting to run</span></div>
+      <div class="verdict-final" id="verdictFinal">Click "watch" above to compare the two agents on the selected scenario.</div>
     </div>
 
-    <div class="section-label section-label-secondary">2 &middot; or play it yourself</div>
+    <div class="section-label section-label-secondary"><span class="step-chip">4</span>or play it yourself</div>
     <div class="promptbar">
       <span class="glyph">&gt;</span>
       <input id="promptInput" type="text" placeholder="a maze with lava traps and a locked door"
@@ -1109,19 +1155,29 @@
     }, 60);
   }
 
+  var selectedScenario = "maze";
+
+  function wireScenarioCards() {
+    var cards = document.querySelectorAll(".scenario-card");
+    cards.forEach(function (card) {
+      card.addEventListener("click", function () {
+        cards.forEach(function (c) { c.classList.remove("active"); });
+        card.classList.add("active");
+        selectedScenario = card.getAttribute("data-scenario");
+      });
+    });
+  }
+
   function runComparison() {
-    var sel = document.getElementById("scenarioSelect");
-    var preset = PRESETS[sel.value];
+    var preset = PRESETS[selectedScenario];
     if (!preset) return;
     var compareBtn = document.getElementById("compareBtn");
-    var verdictPanel = document.getElementById("verdictPanel");
     var honestOutcomeEl = document.getElementById("honestOutcome");
     var adversarialOutcomeEl = document.getElementById("adversarialOutcome");
     var verdictFinalEl = document.getElementById("verdictFinal");
 
     compareBtn.disabled = true;
     compareBtn.textContent = "running honest agent...";
-    verdictPanel.classList.remove("show");
     honestOutcomeEl.textContent = "running...";
     adversarialOutcomeEl.textContent = "waiting...";
     verdictFinalEl.textContent = "";
@@ -1141,7 +1197,6 @@
         var verdict = computeVerdict(preset, honestOut, adversarialOut);
         verdictFinalEl.innerHTML = verdict.label + '<div class="verdict-detail">' + verdict.detail + "</div>";
         verdictFinalEl.className = "verdict-final " + verdict.cls;
-        verdictPanel.classList.add("show");
         compareBtn.disabled = false;
         compareBtn.textContent = "watch: honest agent vs. adversarial agent";
       });
@@ -1346,6 +1401,7 @@
   document.getElementById("restartBtn").addEventListener("click", function () { stopAutoplay(); resetGame(); });
   generateBtn.addEventListener("click", function () { stopAutoplay(); runGenerate(); });
   document.getElementById("compareBtn").addEventListener("click", runComparison);
+  wireScenarioCards();
   fpCanvas.addEventListener("click", function () { fpCanvas.focus(); });
 
   // -- loop --
