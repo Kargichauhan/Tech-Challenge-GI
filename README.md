@@ -27,13 +27,13 @@ Full design rationale and bug-by-bug story: [WRITEUP.md](WRITEUP.md), optional. 
 
 ## Why this covers the brief
 
-**Creativity.** Claude generates scenes from text (`run_claude_demo.py`), or a code-based generator does it with no LLM. A second agent reward-hacks the win condition; a classifier reports how. An invention loop mutates and revises scenes on its own, including the objective's shape, and archives results (MAP-Elites). All playable live from the dashboard above.
+**Creativity.** Scenes come from text two different ways: Claude can read a prompt and generate one directly (`run_claude_demo.py`), or a code-based generator can build one with no LLM involved at all. A second agent then tries to reward-hack whatever the objective is, and a classifier reports how it managed it (or didn't). On top of that, an invention loop mutates and revises scenes on its own, including changing the shape of the objective itself, and keeps an archive of what it finds. All of it is playable live from the dashboard above.
 
-**Clarity.** One command, no API key, GIF output in under 30 seconds. Brief-mapping and architecture below, so nothing needs digging for.
+**Clarity.** One command, no API key, and a GIF you can read in under 30 seconds. The mapping and architecture sections below exist so you don't have to go hunting for how any specific part of the brief got addressed.
 
-**Working output.** `run_demo.py` runs out of the box, guaranteed. 9 more entry points below, each doing something different: Claude-driven generation, a trained Q-learner, the invention loop, a bigger reward-model run.
+**Working output.** `run_demo.py` works out of the box and is the guaranteed path. Nine more entry points sit below it, each doing something different: Claude-driven generation, a trained Q-learner, the invention loop, a bigger reward-model run.
 
-The brief's three research motivations, mapped directly: **post-training environments** → `harness/generation/policy_adaptation.py` + `harness/invention/`. **Code-level objectives** ("picked up the can from the table") → `harness/schema/`'s event log + boolean-predicate objective language, checked in code, brief's exact example as a real demo scene. **Reward model training** → `harness/render/dataset_emitter.py`'s `(frame, action, reward)` export; a real CNN reaches held-out **R²=0.32**, roughly halves the error on rare success/pickup events vs. blind guessing.
+The brief's three research motivations map onto this pretty directly, too. Post-training environments are `harness/generation/policy_adaptation.py` and `harness/invention/`. Code-level objectives, like "picked up the can from the table," are `harness/schema/`'s event log and boolean-predicate objective language, checked entirely in code, with the brief's own example built as a real demo scene. And reward model training is `harness/render/dataset_emitter.py`'s `(frame, action, reward)` export, where a real CNN reaches a held-out **R²=0.32** and roughly halves the error on the rare success/pickup events that matter most, compared to blind guessing.
 
 ## The runnable entry points
 
