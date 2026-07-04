@@ -144,30 +144,30 @@
   /* -- scenario bar -- */
   .scenario-bar {
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 8px;
-    padding: 4px 4px 4px 12px;
+    padding: 12px;
     background: var(--panel-inset);
     border: 1px solid var(--bevel);
     border-radius: 6px;
     margin-bottom: 8px;
-    flex-wrap: wrap;
   }
   .scenario-bar .glyph { color: var(--goal); font-weight: 700; }
   .scenario-bar select {
-    flex: 1;
-    min-width: 220px;
-    background: transparent;
-    border: none;
+    width: 100%;
+    background: var(--panel);
+    border: 1px solid var(--bevel-lit);
+    border-radius: 4px;
     outline: none;
     color: var(--ink);
     font-family: inherit;
     font-size: 13px;
-    padding: 9px 4px;
+    padding: 10px 10px;
   }
   .scenario-bar button {
+    width: 100%;
     font-family: inherit;
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     font-weight: 700;
@@ -175,9 +175,8 @@
     background: var(--goal);
     border: none;
     border-radius: 4px;
-    padding: 9px 14px;
+    padding: 12px 14px;
     cursor: pointer;
-    white-space: nowrap;
   }
   .scenario-bar button:hover { filter: brightness(1.1); }
   .scenario-bar button:disabled { opacity: 0.5; cursor: default; filter: none; }
@@ -411,14 +410,13 @@
   <div class="console">
     <div class="section-label">1 &middot; pick a scene and compare</div>
     <div class="scenario-bar">
-      <span class="glyph">&#9654;</span>
       <select id="scenarioSelect">
-        <option value="gameable">gameable — a locked door with a shortcut over the top</option>
-        <option value="robust">robust — the same door, too tall to hop</option>
-        <option value="maze" selected>the maze — lava traps and a locked door</option>
-        <option value="canOnTable">a table with a can on it</option>
+        <option value="gameable">Gameable — locked door with a shortcut over the top</option>
+        <option value="robust">Robust — same door, too tall to hop</option>
+        <option value="maze" selected>The maze — lava traps + locked door</option>
+        <option value="canOnTable">A table with a can on it</option>
       </select>
-      <button id="compareBtn">watch: honest vs. adversarial</button>
+      <button id="compareBtn">&#9654; Watch: honest vs. adversarial</button>
     </div>
     <p class="scenario-note">
       Honest visits whatever the objective requires, in order, and never forces a locked door.
