@@ -46,7 +46,25 @@
     padding: 32px 16px 48px;
   }
 
-  .rig { width: 100%; max-width: 1020px; }
+  .rig { width: 100%; max-width: 1520px; }
+
+  /* -- two-column dashboard layout -- */
+  .layout {
+    display: grid;
+    grid-template-columns: 440px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+  .col-viewport {
+    border-left: 1px solid var(--bevel);
+    padding-left: 24px;
+    min-width: 0;
+  }
+  .col-controls { min-width: 0; }
+  @media (max-width: 980px) {
+    .layout { grid-template-columns: 1fr; }
+    .col-viewport { border-left: none; padding-left: 0; margin-top: 8px; }
+  }
 
   .rig-eyebrow {
     font-size: 11px;
@@ -474,6 +492,8 @@
   </p>
 
   <div class="console">
+   <div class="layout">
+    <div class="col-controls">
     <div class="section-label"><span class="step-chip">1</span>choose a scenario</div>
     <div class="scenario-grid" id="scenarioGrid">
       <button class="scenario-card" data-scenario="gameable">
@@ -533,6 +553,9 @@
       always checks the layout is reachable first. Click the corridor view, then use arrow
       keys + space to play.
     </p>
+    </div>
+
+    <div class="col-viewport">
     <div class="telemetry">
       <div class="field"><span class="status-pill" id="statusPill">running</span></div>
       <div class="field"><span class="label">tick</span><span class="value" id="tickVal">0</span></div>
@@ -577,6 +600,8 @@
     <div class="ticker">
       <span class="glyph">▸</span><span class="text" id="tickerText">loading objective…</span>
     </div>
+    </div>
+   </div>
   </div>
 </div>
 
