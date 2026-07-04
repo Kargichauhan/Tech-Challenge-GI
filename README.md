@@ -11,7 +11,7 @@
 - Three agents play the same levels: a hand-built honest solver, a hand-built adversarial solver, and a tabular Q-learner that trains from scratch with a real learning curve.
 - An invention loop mutates and revises scenes on its own, including changing the shape of the objective itself, and keeps a MAP-Elites archive of what it finds.
 
-**Run it** (no API key, no network):
+**Run it**:
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
