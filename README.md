@@ -25,7 +25,7 @@ Everything below this line is detail: the requirements mapping, the architecture
 
 ---
 
-## Requirements ↔ what we built
+## Requirements ↔ what is built
 
 | The brief asked for | What's here |
 |---|---|
