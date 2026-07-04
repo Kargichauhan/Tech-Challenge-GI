@@ -1436,8 +1436,36 @@
       }
     });
 
-    tdCtx.fillStyle = COLORS.player;
-    tdCtx.fillRect(state.x * scale, state.y * scale, PLAYER_W * scale, PLAYER_H * scale);
+    drawRobot(tdCtx, state.x * scale, state.y * scale, PLAYER_W * scale, PLAYER_H * scale);
+  }
+
+  function drawRobot(ctx, x, y, w, h) {
+    // A small robot instead of a plain bar: a head (with eyes and an
+    // antenna) on top of a body block.
+    var headH = Math.max(4, h * 0.4);
+    ctx.fillStyle = COLORS.player;
+    ctx.fillRect(x, y + headH, w, h - headH);
+    ctx.fillRect(x, y, w, headH);
+
+    var cx = x + w / 2;
+    ctx.strokeStyle = COLORS.player;
+    ctx.lineWidth = Math.max(1, w * 0.08);
+    ctx.beginPath();
+    ctx.moveTo(cx, y - headH * 0.3);
+    ctx.lineTo(cx, y);
+    ctx.stroke();
+    ctx.fillStyle = COLORS.goal;
+    ctx.beginPath();
+    ctx.arc(cx, y - headH * 0.3, Math.max(1, w * 0.1), 0, Math.PI * 2);
+    ctx.fill();
+
+    var eyeDx = Math.max(1, w / 4);
+    var eyeY = y + headH / 2;
+    ctx.fillStyle = COLORS.bg;
+    ctx.beginPath();
+    ctx.arc(cx - eyeDx, eyeY, Math.max(1, w * 0.08), 0, Math.PI * 2);
+    ctx.arc(cx + eyeDx, eyeY, Math.max(1, w * 0.08), 0, Math.PI * 2);
+    ctx.fill();
   }
 
   function renderHud() {

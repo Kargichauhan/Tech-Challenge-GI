@@ -59,6 +59,26 @@ def _draw_text(surf, text, pos, size=18, color=None, center=False):
     return rect
 
 
+def _draw_player(surf, rect):
+    """A small robot instead of a plain bar: a head (with eyes and an
+    antenna) on top of a body block."""
+    color = COLORS["player"]
+    head_h = max(10, int(rect.height * 0.4))
+    head_rect = pygame.Rect(rect.x, rect.y, rect.width, head_h)
+    body_rect = pygame.Rect(rect.x, rect.y + head_h, rect.width, rect.height - head_h)
+    pygame.draw.rect(surf, color, body_rect, border_radius=3)
+    pygame.draw.rect(surf, color, head_rect, border_radius=4)
+
+    antenna_x = rect.centerx
+    pygame.draw.line(surf, color, (antenna_x, rect.y - 5), (antenna_x, rect.y), width=2)
+    pygame.draw.circle(surf, COLORS["goal_zone"], (antenna_x, rect.y - 5), 2)
+
+    eye_y = rect.y + head_h // 2
+    eye_dx = max(3, rect.width // 4)
+    pygame.draw.circle(surf, COLORS["bg"], (rect.centerx - eye_dx, eye_y), 2)
+    pygame.draw.circle(surf, COLORS["bg"], (rect.centerx + eye_dx, eye_y), 2)
+
+
 def render_scene_frame(scene: dict, engine=None, caption: str | None = None) -> pygame.Surface:
     """One frame: the static scene geometry, plus (if `engine` given) live
     state: player position, which doors are open, which keys/pickups are
@@ -111,11 +131,11 @@ def render_scene_frame(scene: dict, engine=None, caption: str | None = None) -> 
         px, py = engine.player_body.position
         rect = pygame.Rect(0, 0, PLAYER_W, PLAYER_H)
         rect.center = (int(px), int(py))
-        pygame.draw.rect(surf, COLORS["player"], rect, border_radius=4)
+        _draw_player(surf, rect)
     else:
         ps = scene["player_start"]
         rect = pygame.Rect(ps["x"], ps["y"], PLAYER_W, PLAYER_H)
-        pygame.draw.rect(surf, COLORS["player"], rect, border_radius=4)
+        _draw_player(surf, rect)
 
     if caption:
         _draw_text(surf, caption, (10, 8), size=20)
