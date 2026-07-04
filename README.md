@@ -1,8 +1,8 @@
 # Infinite Environment Generation via an Agent Harness
 
-### ▶ [**Live, playable dashboard — click and play, no setup**](https://kargichauhan.github.io/Tech-Challenge-GI/)
+### ▶ [**Live, playable dashboard — click and play, no setup**](https://claude.ai/code/artifact/bf8de770-32b9-439d-8e83-1c24bf156dc2)
 
-Type a text prompt, get a generated environment, walk through it in first-person, right in your browser — hosted permanently from this repo's `docs/` folder via GitHub Pages, not a session-bound link.
+Type a text prompt, get a generated environment, walk through it in first-person, right in your browser. Source lives at [`docs/index.html`](docs/index.html), served permanently via GitHub Pages at [kargichauhan.github.io/Tech-Challenge-GI](https://kargichauhan.github.io/Tech-Challenge-GI/) — if that link is still mid-deploy, the link above is the same demo, live now.
 
 **At a glance** (full detail below):
 - A **real physics engine** (pymunk), not prompt-level tricks — gravity, jump arcs, collision.
