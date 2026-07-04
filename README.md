@@ -2,11 +2,12 @@
 
 ### ▶ [**Dashboard**](https://kargichauhan.github.io/Tech-Challenge-GI/)
 
+![A generated scene being solved honestly, then reward-hacked by the adversarial probe, rendered top-down and first-person side by side](docs/demo.gif)
 
 **At a glance:**
 - A real physics engine (pymunk) runs everything: gravity, jump arcs, and collisions are simulated, not scripted.
 - One command turns text into a validated, playable environment. No API key needed.
-- A second agent actively tries to reward-hack the win condition, and sometimes succeeds. Every scene reports whether it was gamed and how — this is the verifier-robustness problem that reward-model training depends on.
+- A second agent actively tries to reward-hack the win condition, and sometimes succeeds. Every scene reports whether it was gamed and how, which is the verifier-robustness problem that reward-model training depends on.
 - Three agents play the same levels: a hand-built honest solver, a hand-built adversarial solver, and a tabular Q-learner that trains from scratch with a real learning curve.
 - An invention loop mutates and revises scenes on its own, including changing the shape of the objective itself, and keeps a MAP-Elites archive of what it finds.
 
@@ -31,7 +32,7 @@ Everything below this line is detail: the requirements mapping, the architecture
 | Harness that constructs environments from text commands | `run_claude_demo.py "<prompt>"` has Claude read your exact text and emit a scene via a forced tool call. `harness/generation/maze.py` and `deterministic.py` are code-based generators that need no LLM at all. |
 | Playable in a game or physics engine | `harness/engine/physics_engine.py` runs a real pymunk simulation: gravity, jump arcs, collision. Nothing here is approximated. |
 | Agent maneuvers through generated environments | Three independent agents solve the same schema: `solvers/genuine.py` (honest), `solvers/adversarial.py` (exploit-seeking), and `solvers/q_learner.py` (trained from scratch). Claude itself also plays, through `claude_agent/navigator.py`. |
-| "Models like Claude perform well at progressing through 2D environments on their own" (the brief's own stated reason for starting in 2D) | `navigator.py` gives Claude a plain-text description of the state at each decision point, no pixels, and it navigates from there — a direct match to that reasoning, not just a citation of it |
+| "Models like Claude perform well at progressing through 2D environments on their own" (the brief's own stated reason for starting in 2D) | `navigator.py` gives Claude a plain-text description of the state at each decision point, no pixels, and it navigates from there: a direct match to that reasoning, not just a citation of it |
 | Post-training environments (a supply of diverse, verified environments) | `harness/generation/policy_adaptation.py` (weighted resampling) and `harness/invention/` (an invention loop that mutates and revises scenes, archiving the results via MAP-Elites) |
 | Code-level objectives ("picked up the can from the table") | `harness/schema/`'s event log and boolean-predicate objective language check everything in code; nothing is guessed from pixels. The brief's exact example is a real demo scene in `run_demo.py`. |
 | Reward model bridge (code-truth → pixel understanding) | `harness/render/dataset_emitter.py` exports real `(frame, action, reward)` tuples in the challenge's own action vocabulary. A real torch CNN reaches held-out **R²=0.32** and roughly halves the error on the rare success/pickup events that matter most, compared to blind guessing. See below for the full story, including a real sampling bug found and fixed along the way. |
@@ -43,13 +44,13 @@ Everything below this line is detail: the requirements mapping, the architecture
 
 The brief gives three reasons this problem matters to GI's research. Here they are, in the same order:
 
-1. **Post-training environments** — a supply of diverse environments for training and evaluating a vision policy on specific goals and rewards.
-   → `harness/generation/policy_adaptation.py` handles this through weighted resampling over verified combos, and `harness/invention/` handles it through a MAP-Elites archive that mutates and revises scenes on its own — the piece we call the "open-ended invention loop" (see Naming below). Both run end to end with no API key.
+1. **Post-training environments**: a supply of diverse environments for training and evaluating a vision policy on specific goals and rewards.
+   → `harness/generation/policy_adaptation.py` handles this through weighted resampling over verified combos, and `harness/invention/` handles it through a MAP-Elites archive that mutates and revises scenes on its own, the piece we call the "open-ended invention loop" (see Naming below). Both run end to end with no API key.
 
-2. **Code-level objectives** — for example, "successfully picked up the can from the table," verified in code rather than guessed from pixels.
+2. **Code-level objectives**: for example, "successfully picked up the can from the table," verified in code rather than guessed from pixels.
    → `harness/schema/`'s event-log and boolean-predicate objective language do exactly this. The brief's own example is a real scene in `run_demo.py`: a `pickup` primitive sitting on a `platform`, with the objective `{"and": [zone_enter, pickup]}` checked against the engine's structured event log. No VLM involved.
 
-3. **Reward model training** — code-space signals that bridge to pixel-based observation.
+3. **Reward model training**: code-space signals that bridge to pixel-based observation.
    → `harness/render/dataset_emitter.py` exports real `(frame, action, reward)` tuples in the challenge's own action vocabulary. Two reward-model passes were run on this data; see "The reward model" below for the full result, including a methodology bug we found and fixed partway through.
 
 In short, this is a 2D physics-based agent harness. Text commands become playable environments, an agent (a deterministic solver, a trained-from-scratch Q-learner, or Claude itself) navigates them, and a second agent probes whether the "win" condition can be gamed. This mirrors the research loop the challenge describes:
@@ -116,7 +117,7 @@ Six primitives: `platform`, `ramp`, `door`, `key`, `hazard`, `pickup`, plus stru
 
 ### The event log and objective language
 
-The engine emits a flat, timestamped log of structured events: `collision`, `pickup`, `door_open`, `zone_enter`, `zone_exit`, `death`. An objective is a boolean predicate over that log, `{"event": ..., "id": ...}` combined with `and`/`or`/`not`, and it's deliberately order-blind — it checks whether events happened, not in what sequence. That's intentional, not an oversight; it's exactly the surface the adversarial probe is built to exploit. The full design rationale, including why `death` is decoupled from the objective predicate and why `boundary_clip` uses a native pymunk `segment_query` check instead of a trajectory heuristic, is in `harness/schema/event_log_schema.md`.
+The engine emits a flat, timestamped log of structured events: `collision`, `pickup`, `door_open`, `zone_enter`, `zone_exit`, `death`. An objective is a boolean predicate over that log, `{"event": ..., "id": ...}` combined with `and`/`or`/`not`, and it's deliberately order-blind, checking whether events happened rather than in what sequence. That's intentional, not an oversight; it's exactly the surface the adversarial probe is built to exploit. The full design rationale, including why `death` is decoupled from the objective predicate and why `boundary_clip` uses a native pymunk `segment_query` check instead of a trajectory heuristic, is in `harness/schema/event_log_schema.md`.
 
 ### Genuine vs. adversarial solvers
 
@@ -127,7 +128,7 @@ Both solvers plan routes with a coarse grid model (`harness/generation/pathfindi
 
 ### Verifier robustness
 
-This is the "reward signal (verifier robustness)" arrow from the causal chain at the top of this document, made concrete. `harness/verifier/probe.py` runs both solvers fresh on the same scene, and `harness/verifier/exploit_classifier.py` labels what happened. That per-scene label is the actual signal feeding both generation-policy adaptation and the invention loop's regret scoring below — it isn't just a diagnostic that gets printed and discarded.
+This is the "reward signal (verifier robustness)" arrow from the causal chain at the top of this document, made concrete. `harness/verifier/probe.py` runs both solvers fresh on the same scene, and `harness/verifier/exploit_classifier.py` labels what happened. That per-scene label is the actual signal feeding both generation-policy adaptation and the invention loop's regret scoring below, not just a diagnostic that gets printed and discarded.
 
 | `exploit_class` | Meaning |
 |---|---|
@@ -148,7 +149,7 @@ score = 0.5 · genuine_solve_rate + 0.3 · (1 − exploit_rate) + 0.2 · (1 − 
 
 The result is normalized into the next round's sampling distribution, with a floor so no combo's weight ever hits zero (`harness/generation/policy_adaptation.py`). This is a plain weighted-sampling update, not code self-modification.
 
-### The tabular Q-learner — the one agent that actually trains
+### The tabular Q-learner: the one agent that actually trains
 
 `GenuineSolver` and `AdversarialSolver` are both hand-built: they play a fixed strategy from the first attempt and never improve with practice. `harness/solvers/q_learner.py` is the exception, a genuinely trained agent. Its state is `(cell, frozenset(collected_ids))` over the same coarse grid that `pathfinding.py` already builds, and its actions are `move_left`, `move_right`, `jump_left`, and `jump_right`. Every transition reuses `pathfinding.py`'s own primitives (`_is_standing`, `_fall_target`, `_simulate_jump`) rather than a second physics approximation. Reward comes from re-evaluating the whole objective predicate after every step. Unlike the genuine solver, this agent has no notion of "targets" or intended order at all; it discovers the dependency order itself through trial and error. Training is fast, on the order of 2,500 episodes and a few seconds, because the state space is the coarse grid rather than raw per-tick physics. `run_q_learning_demo.py` trains one from scratch on a scene, plots the learning curve, then executes the converged policy for real in the pymunk engine (through the same `do_one_hop` hop executor the other solvers use) and renders it. In testing, it reliably converges from strongly negative early returns to a solved policy on every combo tried, including the hardest five-primitive one.
 
@@ -171,7 +172,7 @@ The challenge's own framing is pixel-observation, first-person action space (mov
 
 **Why not a real raycaster.** A Wolfenstein-style raycaster casts a fan of rays into a 2D top-down map of walls and reads depth off wherever each ray first hits one. It needs a real second spatial axis, left and right, with actual geometry in it. This world doesn't have one; it's a side-scrolling platformer with one horizontal axis plus gravity. A literal port of the algorithm would have every ray in the fan hit the same point. What's built instead is a **corridor-perspective first-person view**: a single forward-looking view along the player's current heading, where objects come into and out of view as the player advances. The depth is real, but it's earned through time, by approaching an object, rather than through a second spatial axis at a single instant. Each object is perspective-scaled (nearer objects render larger) and positioned vertically by its actual world height relative to the player's eye line.
 
-On top of that real content sits a layer of **cosmetic 2.5D dressing**: side wall panels with perspective seam lines, a floor grid receding to a vanishing point, and a slowly drifting parallax skyline. Together they make the view read much more like an actual corridor. This is framing, not a claim about world geometry — there are no real side walls anywhere in this world. The dressing is drawn first, and every real feature (platforms, hazards, doors, the goal zone) is drawn on top of it, so what's real and what's decorative framing is never ambiguous to a viewer.
+On top of that real content sits a layer of **cosmetic 2.5D dressing**: side wall panels with perspective seam lines, a floor grid receding to a vanishing point, and a slowly drifting parallax skyline. Together they make the view read much more like an actual corridor. This is framing, not a claim about world geometry: there are no real side walls anywhere in this world. The dressing is drawn first, and every real feature (platforms, hazards, doors, the goal zone) is drawn on top of it, so what's real and what's decorative framing is never ambiguous to a viewer.
 
 `run_dataset_export.py` renders a dual (top-down plus first-person) GIF side by side and exports a per-tick `(frame, action, reward)` dataset in the challenge's action vocabulary. The mapping is a labeled, approximate bridge, not a claim of equivalence: this world has no lateral strafe axis and no camera that turns independently of movement. See `dataset_emitter.py`'s docstring for the exact mapping.
 
@@ -203,7 +204,7 @@ The CNN's aggregate MAE (0.020) is almost identical to a trivial "always guess t
 A few things worth knowing before you dig into the results:
 
 - **Genuine-solver reliability varies by combo.** The five-primitive combo (`ramp+door+key+hazard+pickup`) solves honestly in roughly half of random seeds. It's the hardest combo in the library, since it stacks every failure mode. Simpler combos, like `hazard` alone or bare platforming, solve close to 100% of the time. `honest_baseline_confirmed` exists specifically so downstream reporting doesn't overclaim on the harder cases.
-- **`boundary_clip` is a verified-correct but currently dormant exploit path** — see the table above. It's real, proven through direct injected-velocity tests, but it isn't reachable at the game's actual jump and move speeds, because pymunk's speculative contacts resist tunneling well past that range.
+- **`boundary_clip` is a verified-correct but currently dormant exploit path** (see the table above). It's real, proven through direct injected-velocity tests, but it isn't reachable at the game's actual jump and move speeds, because pymunk's speculative contacts resist tunneling well past that range.
 - **The Claude-driven navigation layer surfaced a real design bug in how discrete jump actions compose with continuous physics.** It was caught and fixed during development; see `harness/claude_agent/navigator.py`'s module docstring for the full explanation. In short, a single "jump" decision held for the whole 0.25-second window zeroed horizontal velocity for that entire window, making it physically impossible to clear a gap or hazard no matter how well timed, independent of any prompting. The attached recording (`runs/claude_demo/`) shows Claude's own play failing at a hazard from before this fix. We verified through direct scripted testing, bypassing the API entirely, that the underlying jump mechanics are now physically correct: a scripted policy using the same fixed action model clears the identical hazard that killed the recorded run. But a single live run isn't enough to confirm that Claude's own decision timing reliably clears it in practice, and we'd rather say that than cherry-pick a lucky run.
 - **The Q-learner's failed-jump simplification.** `_simulate_jump` returns "no landing" both when an arc grazes solid geometry, which is survivable in the real engine (you bonk and fall back), and when it grazes lethal geometry, which is fatal. The Q-learner's training environment doesn't distinguish between these; a failed jump there is conservatively treated as a wasted move, not death. The trained policy is still executed for real afterward, where the actual engine's hazard detection is authoritative regardless of what training assumed.
 - **The regret metric is a repurposed execution-gap proxy, not classic UED regret.** Classic regret is oracle return minus learner return, which presumes a trained policy on both sides. Only the Q-learner is actually trained in this repo. Regret everywhere else compares a real solver run against a cheap closed-form estimate, not two learned policies.
@@ -222,8 +223,8 @@ The original strategy document this pivot is based on describes a larger system 
 | Game inventor | Full generative proposal system | Fixed move registry (`mutation.py`) + optional Claude revision (`scene_reviser.py`) |
 | Regret | Oracle vs. trained-learner regret | Execution-gap proxy (real solver vs. closed-form estimate); classically-faithful only where the Q-learner applies |
 | Archive | 4D (path-length × interactions × rule-shape × irreversibility) | 2D grid (path-length × interactions); the other two as per-occupant metadata |
-| Agents | Deep RL policy | Tabular Q-learner over the coarse grid — real training, small state space |
-| First-person renderer | Raycasting maze/FPS | Corridor-perspective single-heading view — this world has no second spatial axis |
+| Agents | Deep RL policy | Tabular Q-learner over the coarse grid: real training, small state space |
+| First-person renderer | Raycasting maze/FPS | Corridor-perspective single-heading view (this world has no second spatial axis) |
 | Reward model from pixels | CNN, large held-out set | Both, actually: a dependency-free linear pass (one episode) and a real torch CNN (30 scenes, held out by scene). Held-out R²=0.32, roughly 2x better than blind guessing on the rare events that matter, though aggregate MAE ties a trivial baseline (see Known limitations). |
 | Dataset action vocabulary | Native move fwd/back/left/right + mouse | Approximate mapping from a 2-axis world; strafe fields present but always 0.0 |
 

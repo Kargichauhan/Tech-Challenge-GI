@@ -11,27 +11,27 @@ The challenge: build an agent harness that reliably constructs 2D environments f
 Before writing code, we agreed on a build order and two checkpoints where I'd stop and show the design before it became load-bearing for anything else:
 
 1. Hybrid scene schema: fixed structure plus extensible primitive library
-2. Event-log schema and objective predicate language — **pause for review**
+2. Event-log schema and objective predicate language (**pause for review**)
 3. Freeform generation and validator (reachability/overlap, reject-or-repair)
-4. Adversarial-probe solver and exploit logging — **pause for review**
+4. Adversarial-probe solver and exploit logging (**pause for review**)
 5. Deterministic, zero-API-key path as the guaranteed demo
 6. Per-environment GIF (scene, then trace, then verifier-robustness result)
 7. Verifier-feedback-driven generation-policy adaptation, built last, meant to degrade gracefully if time ran short
 
 Naming discipline was explicit from the start: "generation-policy adaptation" or "verifier-feedback-driven generation," never "self-improvement" or "RSI."
 
-## Step 1 — The scene schema
+## Step 1: The scene schema
 
 Six primitives (`platform`, `ramp`, `door`, `key`, `hazard`, `pickup`) plus structural `player_start`/`goal_zone` fields present in every scene. Doors lock via `key_id` matching a key's own `key_id`. Built as a JSON Schema (`harness/schema/scene_schema.py`) with a validator function, tested against a hand-built example scene before moving on.
 
-## Step 2 — Event log and objective language (checkpoint)
+## Step 2: Event log and objective language (checkpoint)
 
 Six event types (`collision`, `pickup`, `door_open`, `zone_enter`, `zone_exit`, `death`) and a boolean predicate language (`event`/`and`/`or`/`not`) over that log. Two decisions were deliberate and flagged for review before anything got built on top of them:
 
 - **The objective predicate is order-blind by design.** It checks whether events happened, not in what sequence. That's not a gap to close later, it's the actual test surface the adversarial probe (step 4) needed. You confirmed this explicitly and told me not to add a `sequence` operator, since that would split objectives into two tiers and add design surface for no benefit at this stage.
 - **`boundary_clip` detection.** You pushed back on my first instinct (a bbox/trajectory heuristic) and asked for a pymunk-native `segment_query_first` check instead, since a proxy heuristic sitting under the submission's headline verifier-robustness number would be a credibility risk. I agreed and rewrote the design before building the engine on top of it.
 
-## Step 3 — Freeform generation and validator
+## Step 3: Freeform generation and validator
 
 Built the deterministic template generator and the validator pipeline (structural, then referential, then overlap, then reachability, with a repair pass) in parallel, since the deterministic generator became the guaranteed demo path. The reachability check runs a coarse grid model that treats platforms, ramps, and locked doors as solid and simulates jump arcs.
 
@@ -45,11 +45,11 @@ Bugs found and fixed while getting this to actually validate correctly:
 
 After these fixes: 180 of 180 pass across 6 primitive combos times 30 seeds.
 
-## Step 4 — Physics engine
+## Step 4: Physics engine
 
 A pymunk-based engine that executes a scene tick by tick, emits the event log, and implements the native `segment_query`-based boundary-clip check agreed on in step 2. Hazards, locked doors, platforms, and ramps are all solid, matching the approved design (the player is supposed to be blocked by all of them, which is what makes tunneling through one meaningful).
 
-## Step 5 — Genuine solver
+## Step 5: Genuine solver
 
 A greedy/pathfinding solver sharing the grid model with the validator. This is where most of the session's real debugging happened, because "the solver mostly works" isn't the same as "the solver works." Each fix below was found by actually running batches and reading why specific scenes failed, not by inspection:
 
@@ -61,7 +61,7 @@ A greedy/pathfinding solver sharing the grid model with the validator. This is w
 - **Jump-arc mismatch, the deepest one.** The grid model originally approximated a jump as a straight line between takeoff and landing. Real jumps rise fast early and arc over, so the straight-line approximation both approved jumps the real physics couldn't make and rejected ones it could. Replaced with an actual parabolic simulation using the same constants as the real engine (`harness/constants.py`), which removed the whole class of mismatch rather than re-tuning approximation constants.
 - **Pathfinding performance.** Jump simulation was being recomputed from scratch on every replanning call. Caching keyed on `held_keys`, which fully determines door-lock state, cut a batch that was hanging for over five minutes down to about a second. This became directly relevant later, since the generation-policy adaptation loop depends on many fast probe runs.
 
-## Step 6 — Adversarial solver and exploit classifier (checkpoint)
+## Step 6: Adversarial solver and exploit classifier (checkpoint)
 
 Built the adversarial solver, which goes for whatever satisfies the objective cheapest and prefers the goal zone outright even before intended prerequisites, and the exploit classifier (`order_violation`, `unintended_path`, `boundary_clip`, `none`), then paused for review before wiring the GIF renderer or generation-policy adaptation on top.
 
@@ -71,7 +71,7 @@ Three specific verifications were asked for before signing off, and any failure 
 2. **Correlate exploit findings against genuine-solver reliability.** Across a 30-scene batch, the two scenes where an exploit was found without a confirmed honest baseline were both in the same combo known to have lower genuine-solver reliability, a real, non-coincidental correlation. `honest_baseline_confirmed` was added to the probe's output so downstream reporting (GIF captions, aggregate stats) distinguishes a confirmed shortcut past a provably solvable level from the weaker case where the adversary succeeded but nobody confirmed anyone could solve it honestly.
 3. **Check whether the "already there" nudge fallback inflates adversarial success.** My first pass at this check had its own bug: it assumed `goal_zone` is always the last-completed requirement, but the objective's order-blind AND means a different pickup can finish last. Fixed the check, then confirmed 0 of 12 adversarial successes relied on a nudge-only final leg.
 
-## Step 7 — GIF renderer
+## Step 7: GIF renderer
 
 Headless pygame rendering, an off-screen surface with `SDL_VIDEODRIVER=dummy`, assembled by imageio into a GIF: generated scene, then agent trace with live event captions, then a verifier-robustness result screen. Verified visually by extracting and inspecting individual frames, not just trusting that the code ran without errors.
 
@@ -126,31 +126,31 @@ I flagged both the scope risk and the naming contradiction and asked you directl
 
 **Guiding decision carried through the whole pivot**: nothing in `engine/`, `solvers/genuine.py`, `solvers/adversarial.py`, `pathfinding.py`, or `validator.py` changed. The coarse grid model already simulates real jump physics and already serves as a fast oracle; the continuous pymunk engine is the only thing capable of producing `boundary_clip`. Everything new is additive: a new `harness/invention/` package plus a handful of new modules alongside the existing ones.
 
-### Phase 1 — small, honest additions to what already existed
+### Phase 1: small, honest additions to what already existed
 
 A literal interactive human-playable mode (`harness/render/play_human.py`). Jump fires on key-down, not while held, for the same reason the Claude navigator composes jump the way it does (holding it the whole tick window would zero horizontal velocity). Surfaced the validator's existing `seed_attempts` data as an explicit "valid-yield rate" in the demo's output rather than tracking it twice. Added one demo scene using the challenge's own example phrasing ("a table with a can on it, pick up the can"), built from existing `pickup`+`platform` primitives, no schema change.
 
-### Phase 2 — the Q-learner: the one agent that actually trains
+### Phase 2: the Q-learner, the one agent that actually trains
 
 `GenuineSolver` and `AdversarialSolver` are both hand-built and never improve. `harness/solvers/q_learner.py` is a genuinely trained tabular Q-learner over the same coarse grid graph, reusing `pathfinding.py`'s own transition primitives rather than a second physics model. Tested across every combo in the library, including the hardest 5-primitive one, it reliably converges from strongly negative early-episode returns to a solved policy, and the converged policy was verified by actually executing it in the real pymunk engine (not just trusting the training curve) via the same `do_one_hop` executor the other solvers share. The learning curve for the hardest combo goes from roughly -2.0 to +1.0 over 3,000 episodes in about 2.5 seconds, a real, unfaked curve, visually confirmed by reading the rendered chart.
 
-### Phase 3 — the invention loop (checkpoint passed)
+### Phase 3: the invention loop (checkpoint passed)
 
 Built `harness/invention/`'s full registry (mutation, regret, behavior keying, novelty pre-filtering, the archive, the explore/play/work/exploit orchestration) and `run_invention_loop.py`, then, per the agreed checkpoint, ran the deterministic-only loop (no Claude) for several rounds and read `runs/invention/report.json` by hand before building anything further on top. That first real run surfaced a genuine bug: the warm-start seeding round logged its insert result under the key `"inserted"` while every later round used `"accepted"`. The loop itself was correct (5 of 6 seed combos really did fill archive cells), but the printed summary said "0/6 accepted," which would have read as a broken seeding pass if not caught. Fixed by standardizing the key, then re-verified: coverage grew monotonically round over round (20% to 44% across seed plus 6 rounds), regret values landed in a sane 0.0 to 0.35 range, and a few mutations turned up genuinely new `order_violation`/`unintended_path` exploits the original six combos never exposed, exactly the kind of thing an invention loop should be able to find that a fixed-list sampler can't.
 
 With that checkpoint passed, `harness/claude_agent/scene_reviser.py` was layered on top, structurally identical to the proven `scene_generator.py` pattern (forced tool call, defensive JSON-string parsing, bounded retry). Verified the fallback path two ways without spending a real API call: running `--claude` with no key set (confirmed it prints a clear message and proceeds deterministically), and a mocked client whose `messages.create` always raises (confirmed `explore_propose` falls through to a real code-mutation move, not `None`). A live run against a real key is the user's to do, same as `run_claude_demo.py` always has been.
 
-### Phase 4 — archive visualization
+### Phase 4: archive visualization
 
 Invoked the dataviz skill again for a sequential palette, since a heatmap is a different color job than the categorical trend chart from generation-policy adaptation. Its reference palette's sequential ramp is documented for a light chart surface (low value recedes toward a light background), and this repo's charts are all dark-surface, so the ramp is used reversed here: low fitness maps to the ramp's darkest step (blending toward the dark surface), high fitness to its lightest step (popping against it). That's a reasoned adaptation, not a guess. Empty archive cells get a distinct flat neutral gray, not "very dark blue," so a genuine 0.0-fitness cell never looks identical to "never reached." Confirmed visually by reading the rendered PNG: empty cells clearly read as blank, filled cells' brightness clearly tracks fitness.
 
-### Phase 5 — the vision-policy bridge (checkpoint passed)
+### Phase 5: the vision-policy bridge (checkpoint passed)
 
 Before building the raycaster, worked out explicitly why a literal Wolfenstein-style raycaster doesn't apply to a side-scrolling world (no second spatial axis to cast a ray fan into) and scoped it honestly instead: a corridor-perspective first-person view, real depth earned through time rather than a second axis. Built `raycaster.py`, wired it into `gif_builder.py` as an opt-in `dual_render` flag (default off, so the existing deterministic and Claude demos are unaffected), and built `dataset_emitter.py` for the `(frame, action, reward)` export with an explicit mapping onto the challenge's action vocabulary (strafe fields present but always 0.0, since this world has no lateral axis; a heading-flip triggers the one real "look elsewhere" signal). Per the agreed checkpoint, extracted and visually inspected sample frames from a real dual-render GIF before attempting the optional reward model, and confirmed the first-person door correctly grows and switches from locked (orange) to open (green) as the player approaches, with the hazard visible below it.
 
 For the optional reward-model stretch piece, checked what was actually installed rather than assuming: neither torch nor scikit-learn is a dependency in this environment, and installing a deep-learning framework purely for one explicitly-first-to-cut stretch component wasn't worth the weight. Built a closed-form linear regression (numpy only) on downsampled frames instead, and reported the result exactly as measured rather than tuning it to look better: with only about 74 frames from a single playthrough and a much larger downsampled feature count, the fit is heavily underdetermined and the held-out R² is strongly negative. That's a real property of training on one episode, not something a different model choice would fix, and both the module docstring and the README's implemented-vs-envisioned table say so.
 
-### Phase 6 — packaging
+### Phase 6: packaging
 
 Extended, not replaced, `README.md` and this writeup with the invention loop's explore/play/work/exploit mapping, the regret formula, a citations list for the conceptual basis (stated as conceptual basis, not claimed implementations), the naming section's explicit scoping (new terminology for `harness/invention/` only; `policy_adaptation.py` keeps its original, accurate description), an implemented-vs-envisioned table, and the new bugs and limitations from this phase of the session.
 
