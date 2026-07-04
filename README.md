@@ -106,12 +106,6 @@ Every result also carries `honest_baseline_confirmed`, so an exploit found on a 
 
 The CNN's aggregate MAE (0.020) ties a trivial "guess the mean" baseline, because 685 of 697 held-out frames are just the common step penalty. Broken out by event type, the real signal shows up: on the 12 rare pickup/death/success frames, the CNN's MAE is 0.303 versus 0.621 for blind guessing, roughly twice as good on exactly the events a reward model needs to get right. A real sampling bug (missing single-tick events under stride-4 sampling) hid this signal entirely on the first run of this data; see WRITEUP.md for that story.
 
-## Naming
-
-**"Generation-policy adaptation"** (never "self-improvement" or "RSI") describes `harness/generation/policy_adaptation.py`: a sampling distribution over a fixed combo list, reweighted from measured stats.
-
-**"Open-ended invention loop"** is `harness/invention/` specifically: it invents scenes outside any fixed list and grows a standing archive round over round, but it's still bounded, a fixed move registry and archive shape, no code that executes or modifies itself.
-
 ## Known limitations
 
 - **Genuine-solver reliability varies by combo.** The hardest five-primitive combo solves honestly in roughly half of random seeds; simpler combos solve close to 100%. `honest_baseline_confirmed` exists so downstream reporting doesn't overclaim on the harder cases.
