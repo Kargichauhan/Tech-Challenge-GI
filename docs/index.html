@@ -141,6 +141,91 @@
   }
   .promptbar-note b { color: var(--ink-dim); font-weight: 600; }
 
+  /* -- scenario bar -- */
+  .scenario-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 4px 4px 12px;
+    background: var(--panel-inset);
+    border: 1px solid var(--bevel);
+    border-radius: 6px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  .scenario-bar .glyph { color: var(--goal); font-weight: 700; }
+  .scenario-bar select {
+    flex: 1;
+    min-width: 220px;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 13px;
+    padding: 9px 4px;
+  }
+  .scenario-bar button {
+    font-family: inherit;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--bench);
+    background: var(--goal);
+    border: none;
+    border-radius: 4px;
+    padding: 9px 14px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .scenario-bar button:hover { filter: brightness(1.1); }
+  .scenario-bar button:disabled { opacity: 0.5; cursor: default; filter: none; }
+  .scenario-bar button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .scenario-note {
+    font-size: 11px;
+    color: var(--ink-faint);
+    margin: 0 0 14px;
+    line-height: 1.5;
+  }
+  .scenario-note b { color: var(--ink-dim); font-weight: 600; }
+
+  /* -- verdict panel -- */
+  .verdict-panel {
+    display: none;
+    margin-bottom: 14px;
+    background: var(--panel-inset);
+    border: 1px solid var(--bevel);
+    border-radius: 6px;
+    padding: 12px 14px;
+    font-size: 12px;
+  }
+  .verdict-panel.show { display: block; }
+  .verdict-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 4px 0;
+  }
+  .verdict-row .who {
+    min-width: 108px;
+    color: var(--ink-faint);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-size: 10.5px;
+  }
+  .verdict-row .outcome { color: var(--ink); }
+  .verdict-final {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--bevel);
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .verdict-final.exploit { color: var(--hazard); }
+  .verdict-final.robust { color: var(--goal); }
+  .verdict-detail { margin-top: 4px; font-weight: 400; font-size: 11.5px; color: var(--ink-dim); }
+
   /* -- telemetry strip -- */
   .telemetry {
     display: flex;
@@ -320,6 +405,29 @@
   </p>
 
   <div class="console">
+    <div class="scenario-bar">
+      <span class="glyph">&#9654;</span>
+      <select id="scenarioSelect">
+        <option value="gameable">gameable objective — a locked door with a bypass above it</option>
+        <option value="robust">robust objective — the same door, but too tall to hop</option>
+        <option value="maze" selected>the maze — lava traps and a locked door</option>
+        <option value="canOnTable">"a table with a can on it, pick up the can"</option>
+      </select>
+      <button id="compareBtn">watch: honest agent vs. adversarial agent</button>
+    </div>
+    <p class="scenario-note">
+      Loads the picked scene, runs the honest policy (visits what the objective actually
+      requires, in order, never forces a solid obstacle), then resets and runs the adversarial
+      policy (beelines for the goal, rams anything in the way, only backs off to fetch a
+      requirement if ramming genuinely doesn't work), and reports whether the adversary found
+      a shortcut the honest agent didn't take. Same real-time physics as free play below, just
+      driven by a scripted policy instead of your keyboard.
+    </p>
+    <div class="verdict-panel" id="verdictPanel">
+      <div class="verdict-row"><span class="who">honest agent</span><span class="outcome" id="honestOutcome">—</span></div>
+      <div class="verdict-row"><span class="who">adversarial agent</span><span class="outcome" id="adversarialOutcome">—</span></div>
+      <div class="verdict-final" id="verdictFinal"></div>
+    </div>
     <div class="promptbar">
       <span class="glyph">&gt;</span>
       <input id="promptInput" type="text" placeholder="a maze with lava traps and a locked door"
@@ -327,8 +435,8 @@
       <button id="generateBtn">generate</button>
     </div>
     <p class="promptbar-note">
-      Local keyword compiler, not an LLM (no network call happens here). Recognizes
-      <b>lava / spikes / traps</b> (hazards), <b>locked / key / gate</b> (door + key),
+      Or type your own: a local keyword compiler, not an LLM (no network call happens here).
+      Recognizes <b>lava / spikes / traps</b> (hazards), <b>locked / key / gate</b> (door + key),
       <b>maze / winding / zigzag</b> (a harder path), <b>pickup / coin / can / gem</b>
       (a collectible), and checks every layout is reachable before handing it to you,
       the same idea as the Python validator.
@@ -394,34 +502,99 @@
 (function () {
   "use strict";
 
-  // Generated by harness/generation/maze.py, seed 0 (python3 run_maze_demo.py 0),
-  // exactly as the Python engine solved it -- not a hand-tuned demo layout.
-  var SCENE = {
-    world: { width: 2102, height: 720 },
-    playerStart: { x: 40, y: 640 },
-    goalZone: { x: 1952, y: 470, width: 70, height: 90 },
-    objective: { and: [{ event: "zone_enter", id: "goal_zone" }, { event: "pickup", id: "maze_key" }] },
-    objects: [
-      { id: "ground", type: "platform", x: 0, y: 680, width: 1280, height: 40 },
-      { id: "maze_platform_0", type: "platform", x: 200, y: 590, width: 164, height: 24 },
-      { id: "lava_0", type: "hazard", x: 391, y: 660, width: 59, height: 20, lethal: true },
-      { id: "maze_platform_1", type: "platform", x: 475, y: 520, width: 112, height: 24 },
-      { id: "lava_1", type: "hazard", x: 610, y: 660, width: 51, height: 20, lethal: true },
-      { id: "maze_platform_2", type: "platform", x: 703, y: 590, width: 135, height: 24 },
-      { id: "lava_2", type: "hazard", x: 862, y: 660, width: 50, height: 20, lethal: true },
-      { id: "maze_platform_3", type: "platform", x: 945, y: 550, width: 147, height: 24 },
-      { id: "lava_3", type: "hazard", x: 1113, y: 660, width: 51, height: 20, lethal: true },
-      { id: "maze_platform_4", type: "platform", x: 1185, y: 520, width: 128, height: 24 },
-      { id: "lava_4", type: "hazard", x: 1332, y: 660, width: 59, height: 20, lethal: true },
-      { id: "maze_platform_5", type: "platform", x: 1404, y: 590, width: 149, height: 24 },
-      { id: "lava_5", type: "hazard", x: 1576, y: 660, width: 52, height: 20, lethal: true },
-      { id: "maze_platform_6", type: "platform", x: 1647, y: 520, width: 129, height: 24 },
-      { id: "lava_6", type: "hazard", x: 1794, y: 660, width: 58, height: 20, lethal: true },
-      { id: "maze_platform_7", type: "platform", x: 1865, y: 560, width: 167, height: 24 },
-      { id: "maze_key", type: "key", x: 495, y: 498, radius: 12, keyId: "k1" },
-      { id: "maze_door", type: "door", x: 1805, y: 440, width: 30, height: 120, locked: true, keyId: "k1" }
-    ]
+  // Four curated scenes for the "watch it get reward-hacked" comparison
+  // (scenario-bar above), plus free play via the prompt bar below. All four
+  // use the same schema fields the Python harness uses (world/playerStart/
+  // goalZone/objective/objects) and run through the same stepPhysics() and
+  // evaluateObjective() every other scene here does -- nothing about how a
+  // preset is scored differs from a scene typed into the prompt bar.
+  var PRESETS = {
+    // Generated by harness/generation/maze.py, seed 0 (python3 run_maze_demo.py 0),
+    // exactly as the Python engine solved it -- not a hand-tuned demo layout.
+    // Confirmed by the real run: genuine solve succeeds, adversarial probe
+    // finds no exploit. The door is short in absolute terms but sits atop a
+    // segment already at platform height, so there's no clear-air hop path
+    // around it -- the honest and adversarial agents take the same route.
+    maze: {
+      world: { width: 2102, height: 720 },
+      playerStart: { x: 40, y: 640 },
+      goalZone: { x: 1952, y: 470, width: 70, height: 90 },
+      objective: { and: [{ event: "zone_enter", id: "goal_zone" }, { event: "pickup", id: "maze_key" }] },
+      objects: [
+        { id: "ground", type: "platform", x: 0, y: 680, width: 1280, height: 40 },
+        { id: "maze_platform_0", type: "platform", x: 200, y: 590, width: 164, height: 24 },
+        { id: "lava_0", type: "hazard", x: 391, y: 660, width: 59, height: 20, lethal: true },
+        { id: "maze_platform_1", type: "platform", x: 475, y: 520, width: 112, height: 24 },
+        { id: "lava_1", type: "hazard", x: 610, y: 660, width: 51, height: 20, lethal: true },
+        { id: "maze_platform_2", type: "platform", x: 703, y: 590, width: 135, height: 24 },
+        { id: "lava_2", type: "hazard", x: 862, y: 660, width: 50, height: 20, lethal: true },
+        { id: "maze_platform_3", type: "platform", x: 945, y: 550, width: 147, height: 24 },
+        { id: "lava_3", type: "hazard", x: 1113, y: 660, width: 51, height: 20, lethal: true },
+        { id: "maze_platform_4", type: "platform", x: 1185, y: 520, width: 128, height: 24 },
+        { id: "lava_4", type: "hazard", x: 1332, y: 660, width: 59, height: 20, lethal: true },
+        { id: "maze_platform_5", type: "platform", x: 1404, y: 590, width: 149, height: 24 },
+        { id: "lava_5", type: "hazard", x: 1576, y: 660, width: 52, height: 20, lethal: true },
+        { id: "maze_platform_6", type: "platform", x: 1647, y: 520, width: 129, height: 24 },
+        { id: "lava_6", type: "hazard", x: 1794, y: 660, width: 58, height: 20, lethal: true },
+        { id: "maze_platform_7", type: "platform", x: 1865, y: 560, width: 167, height: 24 },
+        { id: "maze_key", type: "key", x: 495, y: 498, radius: 12, keyId: "k1" },
+        { id: "maze_door", type: "door", x: 1805, y: 440, width: 30, height: 120, locked: true, keyId: "k1" }
+      ]
+    },
+
+    // The gameable objective, mirroring harness/tests/test_exploit_classes.py's
+    // unintended_path_scene: the objective only requires reaching goal_zone,
+    // and there is no key anywhere in this scene for its locked door -- it
+    // can never be opened, only bypassed. The door is short (120px) relative
+    // to open air above it, so a policy willing to jump straight at a solid
+    // obstacle can clear its top and walk over. A policy that only jumps for
+    // ordinary gaps/hazards, and never rams a wall, stays blocked at it.
+    gameable: {
+      world: { width: 1400, height: 720 },
+      playerStart: { x: 40, y: 640 },
+      goalZone: { x: 1250, y: 590, width: 70, height: 90 },
+      objective: { event: "zone_enter", id: "goal_zone" },
+      objects: [
+        { id: "ground", type: "platform", x: 0, y: 680, width: 1400, height: 40 },
+        { id: "gate_door", type: "door", x: 600, y: 560, width: 30, height: 120, locked: true, keyId: "gk1" }
+      ]
+    },
+
+    // The same gate, but the door is 300px tall -- well beyond this engine's
+    // ~174px max jump rise (JUMP_SPEED^2 / (2*GRAVITY)), so there is no
+    // clear-air hop over it regardless of policy. The objective also actually
+    // requires the key this time, so the honest route and the only route are
+    // the same thing. The key sits behind the player's start position (not
+    // on the direct line to goal_zone), so a policy that only rushes toward
+    // the goal won't collect it by accident on the way past.
+    robust: {
+      world: { width: 1400, height: 720 },
+      playerStart: { x: 150, y: 640 },
+      goalZone: { x: 1250, y: 590, width: 70, height: 90 },
+      objective: { and: [{ event: "pickup", id: "gate_key2" }, { event: "zone_enter", id: "goal_zone" }] },
+      objects: [
+        { id: "ground", type: "platform", x: 0, y: 680, width: 1400, height: 40 },
+        { id: "gate_key2", type: "key", x: 60, y: 650, radius: 12, keyId: "gk2" },
+        { id: "gate_door2", type: "door", x: 600, y: 380, width: 30, height: 300, locked: true, keyId: "gk2" }
+      ]
+    },
+
+    // The brief's own example phrasing, built from the pickup+platform
+    // primitives, no door at all: nothing to shortcut here.
+    canOnTable: {
+      world: { width: 900, height: 720 },
+      playerStart: { x: 40, y: 640 },
+      goalZone: { x: 780, y: 590, width: 70, height: 90 },
+      objective: { and: [{ event: "pickup", id: "the_can" }, { event: "zone_enter", id: "goal_zone" }] },
+      objects: [
+        { id: "ground", type: "platform", x: 0, y: 680, width: 900, height: 40 },
+        { id: "table", type: "platform", x: 380, y: 620, width: 140, height: 24 },
+        { id: "the_can", type: "pickup", x: 440, y: 596, radius: 10 }
+      ]
+    }
   };
+
+  var SCENE = PRESETS.maze;
 
   function evaluateObjective(node, log) {
     if (node.event !== undefined) {
@@ -667,6 +840,7 @@
   function stepPhysics() {
     if (state.result !== null) return;
     state.tick++;
+    autoplayStep();
 
     var vx = 0;
     if (input.left && !input.right) { vx = -MOVE_SPEED; state.heading = "left"; }
@@ -756,6 +930,231 @@
       tickerTtl--;
       if (tickerTtl === 0) tickerText.textContent = "objective: " + describeObjective(SCENE.objective);
     }
+  }
+
+  // -- scripted autoplay: honest vs. adversarial ---------------------------
+  // Drives the exact same `input` object (left/right/jumpQueued) a human
+  // playing with the arrow keys would, so every tick still runs through the
+  // real stepPhysics() and evaluateObjective() above -- nothing about how a
+  // scripted run is scored differs from free play. Both policies target
+  // whatever the objective's positive pickup leaves still require, in order,
+  // then goal_zone; they only differ in how they react to a *locked door*
+  // specifically blocking the way: honest treats it as an intentional gate
+  // and never forces it, adversarial rams it (repeated jump attempts) and
+  // only falls back to actually fetching the missing pickup if ramming
+  // genuinely doesn't work within a bounded number of attempts -- mirroring
+  // solvers/adversarial.py's own cheapest-reachable-then-ram-then-give-up
+  // shape, simplified for this single-axis JS world.
+  var AUTOPLAY_STUCK_MARGIN = 0.5;      // px of x-movement per tick counted as "still making progress"
+  var AUTOPLAY_HONEST_GIVEUP_TICKS = 150;   // ~2.5s blocked before honest reports stuck
+  var AUTOPLAY_RAM_GIVEUP_TICKS = 240;      // ~4s of ramming a locked door before adversarial reroutes
+  var AUTOPLAY_TOTAL_TICK_BUDGET = 2400;    // ~40s hard cap so a genuinely-unsolvable run can't hang forever
+  var LOOKAHEAD_PX = 22;
+
+  var autoplay = null; // null when inactive; see startAutoplay()
+
+  function unmetRequiredPickups() {
+    return REQUIRED_PICKUPS.filter(function (id) { return !state.collected[id]; });
+  }
+
+  function targetXFor(id) {
+    if (id === "goal_zone") { var gz = SCENE.goalZone; return gz.x + gz.width / 2; }
+    var o = SCENE.objects.filter(function (o2) { return o2.id === id; })[0];
+    return o ? o.x : (SCENE.goalZone.x + SCENE.goalZone.width / 2);
+  }
+
+  function blockingSolidAhead(dir) {
+    var checkX = dir > 0 ? state.x + PLAYER_W + 2 : state.x - 2;
+    var sol = solids();
+    for (var i = 0; i < sol.length; i++) {
+      var s = sol[i];
+      if (checkX >= s.x && checkX <= s.x + s.width && state.y + PLAYER_H > s.y && state.y < s.y + s.height) return s;
+    }
+    return null;
+  }
+
+  function groundAheadMissing(dir) {
+    var frontX = dir > 0 ? state.x + PLAYER_W + LOOKAHEAD_PX : state.x - LOOKAHEAD_PX;
+    var footY = state.y + PLAYER_H;
+    var sol = solids();
+    return !sol.some(function (s) { return frontX >= s.x && frontX <= s.x + s.width && Math.abs(footY - s.y) < 6; });
+  }
+
+  function hazardAhead(dir) {
+    var frontX = dir > 0 ? state.x + PLAYER_W + LOOKAHEAD_PX : state.x - LOOKAHEAD_PX;
+    return SCENE.objects.some(function (o) { return o.type === "hazard" && frontX >= o.x && frontX <= o.x + o.width; });
+  }
+
+  function startAutoplay(mode, tickBudget) {
+    autoplay = {
+      mode: mode,                 // "honest" | "adversarial"
+      phase: "rushing",           // adversarial only: "rushing" | "fetching"
+      blockedTicks: 0,
+      lastX: null,
+      ticksLeft: tickBudget || AUTOPLAY_TOTAL_TICK_BUDGET,
+      done: false,
+      outcome: null               // "success" | "death" | "stuck" | "timeout"
+    };
+  }
+
+  function stopAutoplay() {
+    autoplay = null;
+    input.left = input.right = input.jumpQueued = false;
+  }
+
+  function finishAutoplay(outcome) {
+    if (!autoplay || autoplay.done) return;
+    autoplay.done = true;
+    autoplay.outcome = outcome;
+    input.left = input.right = false;
+  }
+
+  function autoplayStep() {
+    if (!autoplay || autoplay.done) return;
+    autoplay.ticksLeft--;
+    if (autoplay.ticksLeft <= 0) { finishAutoplay("timeout"); return; }
+
+    var targetId;
+    if (autoplay.mode === "honest") {
+      var unmetH = unmetRequiredPickups();
+      targetId = unmetH.length ? unmetH[0] : "goal_zone";
+    } else if (autoplay.phase === "fetching") {
+      var unmetA = unmetRequiredPickups();
+      if (unmetA.length === 0) { autoplay.phase = "rushing"; autoplay.blockedTicks = 0; }
+      targetId = unmetA.length ? unmetA[0] : "goal_zone";
+    } else {
+      targetId = "goal_zone";
+    }
+
+    var tx = targetXFor(targetId);
+    var pc = playerCenter();
+    var dx = tx - pc.x;
+
+    if (Math.abs(dx) < 8) {
+      input.left = input.right = false;
+      autoplay.blockedTicks = 0;
+      autoplay.lastX = state.x;
+      if (state.result) finishAutoplay(state.result);
+      return;
+    }
+
+    input.right = dx > 0;
+    input.left = dx < 0;
+
+    if (autoplay.lastX === null) autoplay.lastX = state.x;
+    if (Math.abs(state.x - autoplay.lastX) > AUTOPLAY_STUCK_MARGIN) autoplay.blockedTicks = 0;
+    else autoplay.blockedTicks++;
+    autoplay.lastX = state.x;
+
+    var dir = dx > 0 ? 1 : -1;
+    if (state.grounded) {
+      var blocker = blockingSolidAhead(dir);
+      var isLockedDoor = !!(blocker && blocker.type === "door");
+      if (hazardAhead(dir) || groundAheadMissing(dir)) {
+        input.jumpQueued = true; // ordinary platforming: both policies clear gaps/hazards the same way
+      } else if (blocker && !isLockedDoor) {
+        input.jumpQueued = true; // an ordinary raised platform in the way -- also just normal movement
+      } else if (blocker && isLockedDoor && autoplay.mode === "adversarial" && autoplay.phase !== "fetching"
+                 && autoplay.blockedTicks > 0 && autoplay.blockedTicks % 15 === 0) {
+        input.jumpQueued = true; // the adversarial-only "ram a locked gate and see if it clips" attempt
+      }
+    }
+
+    if (autoplay.mode === "honest" && autoplay.blockedTicks > AUTOPLAY_HONEST_GIVEUP_TICKS) {
+      finishAutoplay("stuck");
+      return;
+    }
+    if (autoplay.mode === "adversarial" && autoplay.phase !== "fetching" && autoplay.blockedTicks > AUTOPLAY_RAM_GIVEUP_TICKS) {
+      if (unmetRequiredPickups().length > 0) { autoplay.phase = "fetching"; autoplay.blockedTicks = 0; }
+      else { finishAutoplay("stuck"); return; }
+    }
+
+    if (state.result) finishAutoplay(state.result);
+  }
+
+  function describeOutcome(outcome, doorOpened, hasDoor) {
+    if (outcome === "success") return "reached the goal" + (hasDoor ? (doorOpened ? ", opened the door normally" : ", door never opened") : "");
+    if (outcome === "death") return "died";
+    if (outcome === "stuck") return "stuck -- gave up rather than force a locked door";
+    return "timed out";
+  }
+
+  function computeVerdict(scene, honestOut, adversarialOut) {
+    var hasDoor = scene.objects.some(function (o) { return o.type === "door" && o.locked; });
+    if (adversarialOut.outcome === "success" && hasDoor && !adversarialOut.doorOpened) {
+      return {
+        cls: "exploit",
+        label: "EXPLOIT FOUND: unintended_path",
+        detail: "The adversarial agent reached the goal without ever opening the locked door -- it hopped over the top instead."
+      };
+    }
+    if (adversarialOut.outcome === "success" && honestOut.outcome === "success") {
+      return {
+        cls: "robust",
+        label: "ROBUST -- no exploit found",
+        detail: "The adversarial agent tried to force its way through, but only reached the goal via the same route the honest agent used."
+      };
+    }
+    if (adversarialOut.outcome !== "success") {
+      return {
+        cls: "robust",
+        label: "ROBUST -- no shortcut existed",
+        detail: "No exploit was available; the adversarial agent could not reach the goal any faster than the intended route."
+      };
+    }
+    return { cls: "robust", label: "inconclusive", detail: "" };
+  }
+
+  function runOnePhase(mode, onDone) {
+    startAutoplay(mode);
+    var poll = setInterval(function () {
+      if (autoplay && autoplay.done) {
+        clearInterval(poll);
+        var hasDoor = SCENE.objects.some(function (o) { return o.type === "door" && o.locked; });
+        var out = { outcome: autoplay.outcome, doorOpened: !!state.doorOpen };
+        stopAutoplay();
+        onDone(out, hasDoor);
+      }
+    }, 60);
+  }
+
+  function runComparison() {
+    var sel = document.getElementById("scenarioSelect");
+    var preset = PRESETS[sel.value];
+    if (!preset) return;
+    var compareBtn = document.getElementById("compareBtn");
+    var verdictPanel = document.getElementById("verdictPanel");
+    var honestOutcomeEl = document.getElementById("honestOutcome");
+    var adversarialOutcomeEl = document.getElementById("adversarialOutcome");
+    var verdictFinalEl = document.getElementById("verdictFinal");
+
+    compareBtn.disabled = true;
+    compareBtn.textContent = "running honest agent...";
+    verdictPanel.classList.remove("show");
+    honestOutcomeEl.textContent = "running...";
+    adversarialOutcomeEl.textContent = "waiting...";
+    verdictFinalEl.textContent = "";
+    verdictFinalEl.className = "verdict-final";
+
+    loadScene(JSON.parse(JSON.stringify(preset)));
+    fpCanvas.focus();
+
+    runOnePhase("honest", function (honestOut, hasDoor) {
+      honestOutcomeEl.textContent = describeOutcome(honestOut.outcome, honestOut.doorOpened, hasDoor);
+      compareBtn.textContent = "running adversarial agent...";
+      announce("honest agent: " + honestOut.outcome + " -- now watch the adversarial agent");
+
+      loadScene(JSON.parse(JSON.stringify(preset)));
+      runOnePhase("adversarial", function (adversarialOut) {
+        adversarialOutcomeEl.textContent = describeOutcome(adversarialOut.outcome, adversarialOut.doorOpened, hasDoor);
+        var verdict = computeVerdict(preset, honestOut, adversarialOut);
+        verdictFinalEl.innerHTML = verdict.label + '<div class="verdict-detail">' + verdict.detail + "</div>";
+        verdictFinalEl.className = "verdict-final " + verdict.cls;
+        verdictPanel.classList.add("show");
+        compareBtn.disabled = false;
+        compareBtn.textContent = "watch: honest agent vs. adversarial agent";
+      });
+    });
   }
 
   function playerCenter() { return { x: state.x + PLAYER_W / 2, y: state.y + PLAYER_H / 2 }; }
@@ -946,15 +1345,16 @@
     if (e.key === "ArrowLeft") { input.left = true; e.preventDefault(); }
     else if (e.key === "ArrowRight") { input.right = true; e.preventDefault(); }
     else if (e.key === " " || e.key === "ArrowUp") { input.jumpQueued = true; e.preventDefault(); }
-    else if (e.key === "r" || e.key === "R") { resetGame(); }
+    else if (e.key === "r" || e.key === "R") { stopAutoplay(); resetGame(); }
   });
   window.addEventListener("keyup", function (e) {
     if (document.activeElement === promptInput) return;
     if (e.key === "ArrowLeft") input.left = false;
     else if (e.key === "ArrowRight") input.right = false;
   });
-  document.getElementById("restartBtn").addEventListener("click", resetGame);
-  generateBtn.addEventListener("click", runGenerate);
+  document.getElementById("restartBtn").addEventListener("click", function () { stopAutoplay(); resetGame(); });
+  generateBtn.addEventListener("click", function () { stopAutoplay(); runGenerate(); });
+  document.getElementById("compareBtn").addEventListener("click", runComparison);
   fpCanvas.addEventListener("click", function () { fpCanvas.focus(); });
 
   // -- loop --
