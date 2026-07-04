@@ -1,8 +1,7 @@
 # Infinite Environment Generation via an Agent Harness
 
-### ▶ [**Live, playable dashboard — click and play, no login, no setup**](https://kargichauhan.github.io/Tech-Challenge-GI/)
+### ▶ [**Dashboard**](https://kargichauhan.github.io/Tech-Challenge-GI/)
 
-Type a prompt, get a generated environment, and walk through it in first person, right in your browser. It's hosted from this repo's [`docs/index.html`](docs/index.html) via GitHub Pages, so it's a public URL, not a login-gated link.
 
 **At a glance:**
 - A real physics engine (pymunk) runs everything: gravity, jump arcs, and collisions are simulated, not scripted.
