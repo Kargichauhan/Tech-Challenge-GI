@@ -51,7 +51,7 @@
   /* -- three-column landscape dashboard layout -- */
   .layout {
     display: grid;
-    grid-template-columns: minmax(0, 300px) minmax(0, 1.4fr) minmax(0, 300px);
+    grid-template-columns: minmax(220px, 300px) minmax(0, 1.4fr) minmax(220px, 300px);
     gap: 20px;
     align-items: start;
   }
@@ -341,15 +341,18 @@
   .status-pill.dead { background: rgba(227,90,90,0.14); color: var(--hazard); border-color: rgba(227,90,90,0.4); }
   .telemetry .spacer { flex: 1; }
 
-  /* -- viewports -- */
+  /* -- viewports --
+     auto-fit (not a fixed 1fr/1fr, and not a page-width media query): the
+     viewports live inside a nested dashboard column whose actual width has
+     no fixed relationship to the page's own width, so sizing had to react
+     to the SPACE THIS ELEMENT ACTUALLY HAS, not the outer viewport. Each
+     viewport gets a 300px floor; the grid drops to one column on its own
+     the moment two of them would no longer fit side by side. */
   .viewports {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 12px;
     align-items: start;
-  }
-  @media (max-width: 640px) {
-    .viewports { grid-template-columns: 1fr; }
   }
   .viewport {
     position: relative;
