@@ -1397,7 +1397,14 @@
 
   function renderTopDown() {
     var w = tdCanvas.width, h = tdCanvas.height;
-    var scale = w / SCENE.world.width;
+    // Fit BOTH axes within the canvas, not just width -- a single width-only
+    // scale was tuned to happen to fit the original maze's specific world
+    // width (2102px). Any narrower scene (every free-play generated scene is
+    // ~1400-1550px) produced a larger scale factor, which pushed the ground
+    // and every object below the canvas's fixed 360px height entirely --
+    // rendering as a blank panel, not a bug in what was drawn, just drawn
+    // off-screen.
+    var scale = Math.min(w / SCENE.world.width, h / SCENE.world.height);
     tdCtx.fillStyle = COLORS.bg;
     tdCtx.fillRect(0, 0, w, h);
 
