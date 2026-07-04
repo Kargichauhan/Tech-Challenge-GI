@@ -1352,14 +1352,18 @@
 
   // -- loop --
   var last = null, acc = 0;
+  var AUTOPLAY_SPEEDUP = 4; // scripted runs play back this many times faster than real time
+
   function loop(now) {
     requestAnimationFrame(loop);
     if (last === null) last = now;
     var delta = (now - last) / 1000;
     last = now;
     if (delta > 0.25) delta = 0.25;
+    if (autoplay) delta *= AUTOPLAY_SPEEDUP;
     acc += delta;
-    while (acc >= DT) { stepPhysics(); acc -= DT; }
+    var stepsThisFrame = 0;
+    while (acc >= DT && stepsThisFrame < 240) { stepPhysics(); acc -= DT; stepsThisFrame++; }
     render();
   }
 
