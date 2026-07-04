@@ -1,0 +1,17 @@
+# Guaranteed path (run_demo.py, run_q_learning_demo.py, run_invention_loop.py,
+# run_generation_adaptation.py, run_dataset_export.py, run_maze_demo.py) --
+# no API key, no network.
+pymunk==7.3.0
+pygame==2.6.1
+imageio==2.37.3
+jsonschema==4.26.0
+networkx==3.6.1
+matplotlib==3.11.0
+
+# Optional upgrade layer -- only needed for run_claude_demo.py and
+# run_invention_loop.py --claude.
+anthropic==0.116.0
+
+# Optional, separate opt-in -- only needed for run_reward_model_v2.py.
+# CPU build (much smaller than the default CUDA build):
+#   pip install --index-url https://download.pytorch.org/whl/cpu torch
