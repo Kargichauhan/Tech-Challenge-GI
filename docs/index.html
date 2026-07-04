@@ -138,8 +138,38 @@
     color: var(--ink-faint);
     margin: 0 0 14px;
     line-height: 1.5;
+    padding: 10px 12px;
+    background: var(--panel-inset);
+    border: 1px solid var(--bevel);
+    border-radius: 6px;
   }
   .promptbar-note b { color: var(--ink-dim); font-weight: 600; }
+
+  /* -- preset prompt picker -- */
+  .preset-picker {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .preset-picker label {
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    white-space: nowrap;
+  }
+  .preset-picker select {
+    flex: 1;
+    background: var(--panel-inset);
+    border: 1px solid var(--bevel-lit);
+    border-radius: 4px;
+    outline: none;
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 12px;
+    padding: 8px 8px;
+  }
 
   /* -- step chips -- */
   .step-chip {
@@ -220,6 +250,10 @@
     color: var(--ink-faint);
     margin: 0 0 14px;
     line-height: 1.5;
+    padding: 10px 12px;
+    background: var(--panel-inset);
+    border: 1px solid var(--bevel);
+    border-radius: 6px;
   }
   .scenario-note b { color: var(--ink-dim); font-weight: 600; }
 
@@ -476,6 +510,17 @@
     </div>
 
     <div class="section-label section-label-secondary"><span class="step-chip">4</span>or play it yourself</div>
+    <div class="preset-picker">
+      <label for="promptPreset">try:</label>
+      <select id="promptPreset">
+        <option value="">— pick an example prompt —</option>
+        <option value="a maze with lava traps and a locked door">a maze with lava traps and a locked door</option>
+        <option value="a level with a hazard to jump over">a level with a hazard to jump over</option>
+        <option value="a locked door gated by its key">a locked door gated by its key</option>
+        <option value="a winding zigzag path with a pickup">a winding zigzag path with a pickup</option>
+        <option value="a table with a can on it, pick up the can">a table with a can on it, pick up the can</option>
+      </select>
+    </div>
     <div class="promptbar">
       <span class="glyph">&gt;</span>
       <input id="promptInput" type="text" placeholder="a maze with lava traps and a locked door"
@@ -1401,6 +1446,12 @@
   document.getElementById("restartBtn").addEventListener("click", function () { stopAutoplay(); resetGame(); });
   generateBtn.addEventListener("click", function () { stopAutoplay(); runGenerate(); });
   document.getElementById("compareBtn").addEventListener("click", runComparison);
+  document.getElementById("promptPreset").addEventListener("change", function (e) {
+    if (!e.target.value) return;
+    promptInput.value = e.target.value;
+    stopAutoplay();
+    runGenerate();
+  });
   wireScenarioCards();
   fpCanvas.addEventListener("click", function () { fpCanvas.focus(); });
 
